@@ -1,25 +1,164 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Light ---------- */
+:root {
+  color-scheme: light;
+
+  --background: #eef2f8;
+  --foreground: #101828;
+
+  --card: #ffffff;
+  --card-foreground: #101828;
+  --popover: #ffffff;
+  --popover-foreground: #101828;
+
+  --primary: #1f5eff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f3f5fa;
+  --secondary-foreground: #101828;
+  --muted: #f3f5fa;
+  --muted-foreground: #5b6475;
+  --subtle-foreground: #8a92a3;
+  --accent: #edf1f9;
+  --accent-foreground: #101828;
+
+  --border: #e7ebf3;
+  --input: #dde2ec;
+  --ring: #1f5eff;
+
+  --success: #15803d;
+  --success-soft: #e7f6ec;
+  --warning: #b45309;
+  --warning-soft: #fef3e2;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+
+  --elevation-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 10px 28px -14px rgb(16 24 40 / 0.08);
+  --elevation-popover: 0 2px 6px rgb(16 24 40 / 0.06), 0 16px 40px -12px rgb(16 24 40 / 0.14);
+}
+
+/* ---------- Dark ---------- */
+.dark {
+  color-scheme: dark;
+
+  --background: #0b0e15;
+  --foreground: #f1f3f8;
+
+  --card: #121620;
+  --card-foreground: #f1f3f8;
+  --popover: #171c28;
+  --popover-foreground: #f1f3f8;
+
+  --primary: #3b7bff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #181d29;
+  --secondary-foreground: #f1f3f8;
+  --muted: #181d29;
+  --muted-foreground: #a1a8b9;
+  --subtle-foreground: #6c7488;
+  --accent: #1b2130;
+  --accent-foreground: #f1f3f8;
+
+  --border: #222839;
+  --input: #2a3144;
+  --ring: #4d86ff;
+
+  --success: #4ade80;
+  --success-soft: rgb(74 222 128 / 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgb(251 191 36 / 0.12);
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.12);
+
+  --elevation-card: 0 10px 28px -14px rgb(0 0 0 / 0.55);
+  --elevation-popover: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+}
+
+/* ---------- Tokens exposés à Tailwind ---------- */
 @theme inline {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --shadow-card: var(--elevation-card);
+  --shadow-popover: var(--elevation-popover);
 }
 
+@theme {
+  --radius-sm: 0.5rem;   /* 8 px  : petits contrôles */
+  --radius-md: 0.75rem;  /* 12 px : boutons, champs */
+  --radius-lg: 1rem;     /* 16 px : cartes */
+  --radius-xl: 1.25rem;  /* 20 px : grands conteneurs */
+
+  --tracking-display: -0.04em;  /* grands chiffres, titres hero */
+  --tracking-title: -0.03em;    /* h1, h2 */
+  --tracking-heading: -0.02em;  /* h3, h4 */
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Base ---------- */
 @layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
   }
 
   body {
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--font-sans);
   }
 
   h1,
-  h2,
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: var(--tracking-title);
+  }
+
   h3,
   h4 {
     font-family: var(--font-display);
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
