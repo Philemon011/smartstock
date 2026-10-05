@@ -162,3 +162,31 @@
     outline-offset: 2px;
   }
 }
+
+
+
+/* ---------- Transition douce lors du changement de thème ---------- */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 250ms var(--ease-smooth),
+    border-color 250ms var(--ease-smooth),
+    color 250ms var(--ease-smooth),
+    fill 250ms var(--ease-smooth),
+    stroke 250ms var(--ease-smooth),
+    box-shadow 250ms var(--ease-smooth) !important;
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,12 +1,17 @@
+import { ThemeToggle } from "@/components/theme-toggle";
+
 export default function Home() {
   return (
     <main className="mx-auto max-w-3xl space-y-8 p-10">
-      <header className="space-y-2">
-        <h1 className="text-4xl">Gestion de stock</h1>
-        <p className="text-muted-foreground">Texte secondaire (niveau 2)</p>
-        <p className="text-sm text-subtle-foreground">
-          Information discrète (niveau 3)
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-4xl">Gestion de stock</h1>
+          <p className="text-muted-foreground">Texte secondaire (niveau 2)</p>
+          <p className="text-sm text-subtle-foreground">
+            Information discrète (niveau 3)
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
 
       <section className="rounded-xl border bg-card p-6 shadow-card">
