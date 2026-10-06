@@ -10,6 +10,9 @@ use App\Notifications\RegistrationAttemptNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
+
+use function Illuminate\Support\defer;
 
 class RegisterController extends Controller
 {
@@ -22,7 +25,9 @@ class RegisterController extends Controller
         $existing = User::where('email', $data['email'])->first();
 
         if ($existing !== null) {
-            $existing->notify(new RegistrationAttemptNotification());
+            // Même coût de calcul qu'une vraie inscription : le temps de réponse ne révèle pas l'existence du compte.
+            Hash::make($data['password']);
+            defer(fn () => $existing->notify(new RegistrationAttemptNotification()));
 
             return $this->neutralResponse();
         }
@@ -34,7 +39,7 @@ class RegisterController extends Controller
             return $this->neutralResponse();
         }
 
-        event(new Registered($result['user']));
+        defer(fn () => event(new Registered($result['user'])));
 
         return $this->neutralResponse();
     }
