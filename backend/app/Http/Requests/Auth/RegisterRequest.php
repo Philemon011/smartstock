@@ -32,7 +32,7 @@ class RegisterRequest extends FormRequest
         return [
             'company_name' => ['required', 'string', 'min:2', 'max:120'],
             'country' => ['required', 'string', Rule::in(array_keys(config('tenants.countries')))],
-            'currency' => ['required', 'string', Rule::in(config('tenants.currencies'))],
+            'currency' => ['required', 'string', Rule::in(array_keys(config('tenants.currencies')))],
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email:rfc', 'max:254'],
             'password' => ['required', 'string', 'max:128', Password::min(10)->uncompromised()],
