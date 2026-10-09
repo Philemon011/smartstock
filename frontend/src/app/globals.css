@@ -38,6 +38,8 @@
 
   --elevation-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 10px 28px -14px rgb(16 24 40 / 0.08);
   --elevation-popover: 0 2px 6px rgb(16 24 40 / 0.06), 0 16px 40px -12px rgb(16 24 40 / 0.14);
+
+    --brand-panel: #0f4bd9;
 }
 
 /* ---------- Dark ---------- */
@@ -76,6 +78,8 @@
 
   --elevation-card: 0 10px 28px -14px rgb(0 0 0 / 0.55);
   --elevation-popover: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+
+    --brand-panel: #123fb0;
 }
 
 /* ---------- Tokens exposés à Tailwind ---------- */
@@ -110,6 +114,8 @@
 
   --shadow-card: var(--elevation-card);
   --shadow-popover: var(--elevation-popover);
+
+    --color-brand-panel: var(--brand-panel);
 }
 
 @theme {
