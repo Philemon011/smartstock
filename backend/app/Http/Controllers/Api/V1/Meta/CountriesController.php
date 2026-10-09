@@ -31,6 +31,8 @@ class CountriesController extends Controller
             ->json([
                 'countries' => $countries,
                 'currencies' => $currencies,
+                'trial_days' => (int) config('tenants.trial_days'),
+                'password_min_length' => (int) config('auth.password_min_length'),
             ])
             ->header('Cache-Control', 'public, max-age=3600');
     }

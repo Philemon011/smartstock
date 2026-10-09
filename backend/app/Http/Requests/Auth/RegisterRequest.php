@@ -35,7 +35,7 @@ class RegisterRequest extends FormRequest
             'currency' => ['required', 'string', Rule::in(array_keys(config('tenants.currencies')))],
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email:rfc', 'max:254'],
-            'password' => ['required', 'string', 'max:128', Password::min(10)->uncompromised()],
+                        'password' => ['required', 'string', 'max:128', Password::min((int) config('auth.password_min_length'))->uncompromised()],
         ];
     }
 
@@ -71,7 +71,7 @@ class RegisterRequest extends FormRequest
             'password.required' => "Choisissez un mot de passe.",
             'password.string' => "Votre mot de passe n'est pas valide.",
             'password.max' => "Votre mot de passe ne peut pas dépasser 128 caractères.",
-            'password.min' => "Votre mot de passe doit contenir au moins 10 caractères.",
+            'password.min' => "Votre mot de passe doit contenir au moins :min caractères.",
         ];
     }
 

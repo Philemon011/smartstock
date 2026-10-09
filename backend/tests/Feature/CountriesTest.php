@@ -8,13 +8,15 @@ use Tests\TestCase;
 
 class CountriesTest extends TestCase
 {
-    public function test_it_lists_countries_and_currencies(): void
+          public function test_it_lists_countries_currencies_and_reference_settings(): void
     {
         $response = $this->getJson('/api/v1/meta/countries');
 
         $response->assertOk()->assertJsonStructure([
             'countries' => [['code', 'name', 'currency']],
             'currencies' => [['code', 'name']],
+            'trial_days',
+            'password_min_length',
         ]);
 
         $benin = collect($response->json('countries'))->firstWhere('code', 'BJ');
@@ -23,6 +25,9 @@ class CountriesTest extends TestCase
             ['code' => 'BJ', 'name' => 'Bénin', 'currency' => 'XOF'],
             $benin,
         );
+
+        $this->assertSame(14, $response->json('trial_days'));
+        $this->assertSame(10, $response->json('password_min_length'));
     }
 
     public function test_every_listed_country_and_currency_is_accepted_by_registration(): void

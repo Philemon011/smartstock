@@ -114,6 +114,7 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'password_min_length' => 10,
         'verification' => [
         'expire' => 1440,
     ],
