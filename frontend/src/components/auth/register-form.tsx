@@ -95,7 +95,13 @@ export function RegisterForm({
   }, [focusToken]);
 
   if (success) {
-    return <RegistrationSuccess email={success.email} message={success.message} />;
+        return (
+      <RegistrationSuccess
+        email={success.email}
+        message={success.message}
+        onEdit={() => setSuccess(null)}
+      />
+    );
   }
 
   const countryOptions = countries.map((item) => ({ value: item.code, label: item.name }));
