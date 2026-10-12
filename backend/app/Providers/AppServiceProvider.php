@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -17,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->configureVerificationEmail();
     }
 
     private function configureRateLimiting(): void
@@ -33,6 +36,25 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('verify-email', fn (Request $request): Limit => Limit::perMinute(20)->by('verify-ip|'.$request->ip()));
+    }
+
+    private function configureVerificationEmail(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url): MailMessage {
+            $appName = config('app.name');
+            $trialDays = (int) config('tenants.trial_days');
+            $hours = max(1, (int) round(config('auth.verification.expire', 60) / 60));
+            $hoursLabel = $hours > 1 ? 'heures' : 'heure';
+
+            return (new MailMessage)
+                ->subject('Confirmez votre adresse email')
+                ->greeting("Bonjour {$notifiable->name},")
+                ->line("Bienvenue sur {$appName}. Confirmez votre adresse email pour activer votre espace et démarrer votre essai gratuit de {$trialDays} jours.")
+                ->action('Confirmer mon adresse email', $url)
+                ->line("Ce lien est valable {$hours} {$hoursLabel}. Passé ce délai, vous pourrez en demander un nouveau.")
+                ->line("Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet email.")
+                ->salutation("L'équipe {$appName}");
+        });
     }
 
     private function emailKey(Request $request): string
