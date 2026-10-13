@@ -128,43 +128,83 @@ function toApiError(status: number, payload: unknown): ApiError {
     });
 }
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+
+  const entry = document.cookie.split("; ").find((row) => row.startsWith(`${name}=`));
+
+  return entry ? decodeURIComponent(entry.slice(name.length + 1)) : null;
+}
+
+async function ensureCsrfCookie(force = false): Promise<void> {
+  if (!force && readCookie("XSRF-TOKEN")) return;
+
+  try {
+    await fetch(`${getBaseUrl()}/sanctum/csrf-cookie`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    // Une panne réseau sera signalée par la requête principale elle-même.
+  }
+}
+
+
 export async function apiRequest<T>(
-    path: string,
-    options: RequestOptions = {},
+  path: string,
+  options: RequestOptions = {},
 ): Promise<T> {
-    const { method = "GET", body, signal } = options;
+  const { method = "GET", body, signal } = options;
+  const isWrite = method !== "GET";
+
+  async function send(): Promise<Response> {
+    if (isWrite) {
+      await ensureCsrfCookie();
+    }
+
+    const xsrfToken = isWrite ? readCookie("XSRF-TOKEN") : null;
     const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
 
-    let response: Response;
+    return fetch(`${getBaseUrl()}${path}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(xsrfToken ? { "X-XSRF-TOKEN": xsrfToken } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      credentials: "include",
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  }
 
-    try {
-        response = await fetch(`${getBaseUrl()}${path}`, {
-            method,
-            headers: {
-                Accept: "application/json",
-                ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-            },
-            body: body !== undefined ? JSON.stringify(body) : undefined,
-            credentials: "include",
-            signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-        });
-    } catch (error) {
-        if (signal?.aborted) {
-            throw error;
-        }
+  let response: Response;
 
-        if (error instanceof DOMException && error.name === "TimeoutError") {
-            throw new ApiError({ message: MESSAGES.timeout, status: 0, code: "timeout" });
-        }
+  try {
+    response = await send();
 
-        throw new ApiError({ message: MESSAGES.network, status: 0, code: "network_error" });
+    if (response.status === 419 && isWrite) {
+      await ensureCsrfCookie(true);
+      response = await send();
+    }
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
     }
 
-    const payload = await readJson(response);
-
-    if (response.ok) {
-        return payload as T;
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new ApiError({ message: MESSAGES.timeout, status: 0, code: "timeout" });
     }
 
-    throw toApiError(response.status, payload);
+    throw new ApiError({ message: MESSAGES.network, status: 0, code: "network_error" });
+  }
+
+  const payload = await readJson(response);
+
+  if (response.ok) {
+    return payload as T;
+  }
+
+  throw toApiError(response.status, payload);
 }

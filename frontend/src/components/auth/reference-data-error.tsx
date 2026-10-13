@@ -5,13 +5,17 @@ import { useTransition } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
-export function ReferenceDataError() {
+type ReferenceDataErrorProps = {
+  title?: string;
+};
+
+export function ReferenceDataError({ title = "Créez votre espace" }: ReferenceDataErrorProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
     <div className="space-y-5">
-      <h1 className="text-3xl">Créez votre espace</h1>
+      <h1 className="text-3xl">{title}</h1>
 
       <Alert variant="danger" title="Le formulaire ne peut pas s'afficher">
         Impossible de joindre le serveur pour le moment. Vérifiez votre connexion
