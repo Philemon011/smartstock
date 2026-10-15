@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\PasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class RegisterRequest extends FormRequest
 {
@@ -35,7 +35,7 @@ class RegisterRequest extends FormRequest
             'currency' => ['required', 'string', Rule::in(array_keys(config('tenants.currencies')))],
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email:rfc', 'max:254'],
-                        'password' => ['required', 'string', 'max:128', Password::min((int) config('auth.password_min_length'))->uncompromised()],
+            'password' => PasswordRules::rules(),
         ];
     }
 
@@ -68,10 +68,7 @@ class RegisterRequest extends FormRequest
             'email.email' => "Cette adresse email n'est pas valide. Exemple : nom@entreprise.com",
             'email.max' => "Votre adresse email ne peut pas dépasser 254 caractères.",
 
-            'password.required' => "Choisissez un mot de passe.",
-            'password.string' => "Votre mot de passe n'est pas valide.",
-            'password.max' => "Votre mot de passe ne peut pas dépasser 128 caractères.",
-            'password.min' => "Votre mot de passe doit contenir au moins :min caractères.",
+            ...PasswordRules::messages(),
         ];
     }
 

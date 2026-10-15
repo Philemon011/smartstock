@@ -20,4 +20,20 @@ enum TenantRole: string
             self::Viewer => 'Lecture seule',
         };
     }
+
+        /**
+     * Peut gérer la structure de l'entreprise (entrepôts, catégories, paramètres).
+     */
+    public function canManageStructure(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin], true);
+    }
+
+        /**
+     * Peut gérer le catalogue (catégories, articles).
+     */
+    public function canManageCatalog(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin, self::StockManager], true);
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Actions\Tenants;
 use App\Enums\TenantRole;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 class RegisterTenant
@@ -33,6 +34,13 @@ class RegisterTenant
                 'user_id' => $user->id,
                 'role' => TenantRole::Owner,
             ]);
+
+            // Dès l'inscription, l'entreprise a un lieu de stockage : elle n'est jamais bloquée.
+            (new Warehouse)->forceFill([
+                'tenant_id' => $tenant->id,
+                'name' => 'Entrepôt principal',
+                'is_main' => true,
+            ])->save();
 
             return ['user' => $user, 'tenant' => $tenant];
         });

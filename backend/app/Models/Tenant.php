@@ -107,4 +107,31 @@ class Tenant extends Model
 
         return max(0, (int) ceil($seconds / 86400));
     }
+
+        /**
+     * Les écritures sont permises : abonnement actif, ou essai en cours (la date fait foi, pas besoin de tâche planifiée).
+     */
+    public function isWritable(): bool
+    {
+        return match ($this->status) {
+            TenantStatus::Active => true,
+            TenantStatus::Trial => $this->trial_ends_at === null || $this->trial_ends_at->isFuture(),
+            default => false,
+        };
+    }
+
+
+        /**
+     * Message à montrer quand les écritures sont bloquées (null si l'espace est modifiable).
+     */
+    public function readOnlyMessage(): ?string
+    {
+        if ($this->isWritable()) {
+            return null;
+        }
+
+        return $this->status === TenantStatus::Suspended
+            ? 'Cet espace est suspendu. Contactez le support pour le réactiver.'
+            : 'Votre essai gratuit est terminé. Vos données restent consultables, mais vous ne pouvez plus les modifier.';
+    }
 }

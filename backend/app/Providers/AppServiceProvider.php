@@ -8,18 +8,20 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void
+        public function register(): void
     {
-        //
+        $this->app->scoped(\App\Support\Tenancy\CurrentTenant::class);
     }
 
     public function boot(): void
     {
         $this->configureRateLimiting();
         $this->configureVerificationEmail();
+        $this->configureResetPasswordEmail();
     }
 
     private function configureRateLimiting(): void
@@ -36,6 +38,17 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('verify-email', fn (Request $request): Limit => Limit::perMinute(20)->by('verify-ip|'.$request->ip()));
+
+        
+        RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(30)->by('login-ip|'.$request->ip()));
+
+        RateLimiter::for('forgot-password', fn (Request $request): array => [
+            Limit::perMinute(1)->by('forgot-pair|'.$request->ip().'|'.$this->emailKey($request)),
+            Limit::perHour(5)->by('forgot-email|'.$this->emailKey($request)),
+            Limit::perHour(20)->by('forgot-ip|'.$request->ip()),
+        ]);
+
+        RateLimiter::for('reset-password', fn (Request $request): Limit => Limit::perMinute(10)->by('reset-ip|'.$request->ip()));
     }
 
     private function configureVerificationEmail(): void
@@ -53,6 +66,28 @@ class AppServiceProvider extends ServiceProvider
                 ->action('Confirmer mon adresse email', $url)
                 ->line("Ce lien est valable {$hours} {$hoursLabel}. Passé ce délai, vous pourrez en demander un nouveau.")
                 ->line("Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet email.")
+                ->salutation("L'équipe {$appName}");
+        });
+    }
+
+
+        private function configureResetPasswordEmail(): void
+    {
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            $appName = config('app.name');
+            $minutes = (int) config('auth.passwords.users.expire', 60);
+            $url = rtrim((string) config('app.frontend_url'), '/').'/reset-password?'.http_build_query([
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ]);
+
+            return (new MailMessage)
+                ->subject('Réinitialisation de votre mot de passe')
+                ->greeting("Bonjour {$notifiable->name},")
+                ->line("Vous avez demandé à choisir un nouveau mot de passe pour votre compte {$appName}.")
+                ->action('Choisir un nouveau mot de passe', $url)
+                ->line("Ce lien est valable {$minutes} minutes et ne peut être utilisé qu'une seule fois.")
+                ->line("Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe actuel reste valable.")
                 ->salutation("L'équipe {$appName}");
         });
     }
