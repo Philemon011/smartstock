@@ -38,6 +38,7 @@ export type TenantSummary = {
   status: TenantStatus;
   trial_ends_at: string | null;
   trial_days_remaining: number | null;
+    read_only_message: string | null;
 };
 
 export type Membership = {

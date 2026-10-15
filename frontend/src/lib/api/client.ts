@@ -128,6 +128,19 @@ function toApiError(status: number, payload: unknown): ApiError {
     });
 }
 
+let activeTenantId: string | null = null;
+let unauthenticatedHandler: (() => void) | null = null;
+
+/** Entreprise sur laquelle la personne travaille : envoyée avec chaque requête. */
+export function setActiveTenantId(tenantId: string | null): void {
+  activeTenantId = tenantId;
+}
+
+/** Appelé quand l'API répond « session expirée » (hors pages de connexion). */
+export function setUnauthenticatedHandler(handler: (() => void) | null): void {
+  unauthenticatedHandler = handler;
+}
+
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
 
@@ -172,6 +185,7 @@ export async function apiRequest<T>(
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(xsrfToken ? { "X-XSRF-TOKEN": xsrfToken } : {}),
+        ...(activeTenantId ? { "X-Tenant-Id": activeTenantId } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       credentials: "include",
@@ -206,5 +220,11 @@ export async function apiRequest<T>(
     return payload as T;
   }
 
-  throw toApiError(response.status, payload);
+  const apiError = toApiError(response.status, payload);
+
+  if (response.status === 401 && !path.startsWith("/api/v1/auth/") && path !== "/api/v1/me") {
+    unauthenticatedHandler?.();
+  }
+
+  throw apiError;
 }

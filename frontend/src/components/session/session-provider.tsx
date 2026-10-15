@@ -9,8 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchMe, logout, type Me } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { fetchMe, logout, type Me, type Membership } from "@/lib/api/auth";
+import { ApiError, setActiveTenantId, setUnauthenticatedHandler } from "@/lib/api/client";
+import { currentMembership } from "@/lib/session";
 
 type SessionState =
   | { status: "loading" }
@@ -34,13 +35,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
+  // Une session expirée en cours d'utilisation ramène à la connexion.
+  useEffect(() => {
+    setUnauthenticatedHandler(() => {
+      setActiveTenantId(null);
+      setSession((current) =>
+        current.status === "authenticated" ? { status: "unauthenticated" } : current,
+      );
+    });
+
+    return () => setUnauthenticatedHandler(null);
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
 
     fetchMe(controller.signal)
-      .then((me) => setSession({ status: "authenticated", me }))
+      .then((me) => {
+        // L'entreprise active est connue avant que la moindre page ne s'affiche.
+        setActiveTenantId(currentMembership(me)?.tenant.id ?? null);
+        setSession({ status: "authenticated", me });
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
+
+        setActiveTenantId(null);
 
         if (error instanceof ApiError && error.status === 401) {
           setSession({ status: "unauthenticated" });
@@ -69,9 +88,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     try {
       await logout();
+      setActiveTenantId(null);
       setSession({ status: "signed-out" });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
+        setActiveTenantId(null);
         setSession({ status: "signed-out" });
         return;
       }
@@ -102,4 +123,24 @@ export function useSession(): SessionContextValue {
   }
 
   return context;
+}
+
+/**
+ * L'entreprise active de la personne connectée. À n'utiliser que dans l'espace connecté :
+ * le garde d'accès n'affiche les pages que si une entreprise active existe.
+ */
+export function useActiveMembership(): Membership {
+  const { session } = useSession();
+
+  if (session.status !== "authenticated") {
+    throw new Error("useActiveMembership exige une session ouverte.");
+  }
+
+  const membership = currentMembership(session.me);
+
+  if (membership === null) {
+    throw new Error("Aucune entreprise active.");
+  }
+
+  return membership;
 }

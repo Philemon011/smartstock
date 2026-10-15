@@ -142,6 +142,67 @@
       transform: translateY(0) scale(1);
     }
   }
+
+    --animate-fade-in: fade-in 200ms var(--ease-smooth);
+  --animate-fade-out: fade-out 150ms var(--ease-smooth) forwards;
+  --animate-slide-in-right: slide-in-right 250ms var(--ease-smooth);
+  --animate-slide-out-right: slide-out-right 200ms var(--ease-smooth) forwards;
+  --animate-slide-in-left: slide-in-left 250ms var(--ease-smooth);
+  --animate-slide-out-left: slide-out-left 200ms var(--ease-smooth) forwards;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
 }
 
 /* ---------- Base ---------- */
