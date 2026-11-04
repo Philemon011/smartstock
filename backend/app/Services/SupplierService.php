@@ -10,6 +10,7 @@ use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Models\StockEntry;
 
 class SupplierService
 {
@@ -78,9 +79,9 @@ class SupplierService
      * Un fournisseur est « utilisé » s'il apparaît dans des entrées de stock.
      * Le module Entrées complétera cette règle quand ces données existeront.
      */
-    private function isUsed(Supplier $supplier): bool
+        private function isUsed(Supplier $supplier): bool
     {
-        return false;
+        return StockEntry::query()->where('supplier_id', $supplier->id)->exists();
     }
 
     /**

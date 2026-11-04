@@ -10,6 +10,8 @@ use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Models\StockEntry;
+use App\Models\StockLot;
 
 class WarehouseService
 {
@@ -61,7 +63,7 @@ class WarehouseService
         });
     }
 
-    public function deactivate(Warehouse $warehouse): Warehouse
+        public function deactivate(Warehouse $warehouse): Warehouse
     {
         return $this->atomically(function () use ($warehouse): Warehouse {
             $warehouse->refresh();
@@ -70,6 +72,18 @@ class WarehouseService
                 throw new BusinessRuleException(
                     'Définissez un autre entrepôt principal avant de désactiver celui-ci.',
                     'main_warehouse',
+                );
+            }
+
+            $holdsStock = StockLot::query()
+                ->where('warehouse_id', $warehouse->id)
+                ->where('quantity_remaining', '>', 0)
+                ->exists();
+
+            if ($holdsStock) {
+                throw new BusinessRuleException(
+                    'Cet entrepôt contient encore du stock. Videz-le (sorties ou transferts) avant de le désactiver.',
+                    'warehouse_has_stock',
                 );
             }
 
@@ -116,9 +130,9 @@ class WarehouseService
      * Un entrepôt « a servi » s'il porte du stock ou des mouvements.
      * Le module Mouvements de stock complètera cette règle quand ces données existeront.
      */
-    private function isUsed(Warehouse $warehouse): bool
+        private function isUsed(Warehouse $warehouse): bool
     {
-        return false;
+        return StockEntry::query()->where('warehouse_id', $warehouse->id)->exists();
     }
 
     /**

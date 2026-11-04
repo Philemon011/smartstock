@@ -6,13 +6,13 @@ use App\Actions\Tenants\RegisterTenant;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Auth;
 
 class AuthenticationTest extends TestCase
 {
@@ -128,7 +128,7 @@ class AuthenticationTest extends TestCase
 
     // --------------------------------------------------- Déconnexion et utilisateur
 
-        public function test_logout_closes_the_session(): void
+    public function test_logout_closes_the_session(): void
     {
         ['user' => $user] = $this->createAccount();
 
@@ -150,7 +150,9 @@ class AuthenticationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('user.id', $user->id)
             ->assertJsonPath('memberships.0.tenant.id', $tenant->id)
-            ->assertJsonPath('memberships.0.role_label', 'Propriétaire');
+            ->assertJsonPath('memberships.0.role_label', 'Propriétaire')
+            ->assertJsonPath('memberships.0.abilities.manage_stock', true)
+            ->assertJsonPath('memberships.0.abilities.view_costs', true);
     }
 
     // ------------------------------------------------------- Mot de passe oublié

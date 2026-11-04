@@ -6,6 +6,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\Article;
 use App\Models\ArticlePackaging;
 use App\Models\ArticlePriceChange;
+use App\Models\StockEntryLine;
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
 use Closure;
@@ -17,9 +18,7 @@ use Illuminate\Validation\ValidationException;
 
 class ArticleService
 {
-    public function __construct(private readonly SequenceGenerator $sequences)
-    {
-    }
+    public function __construct(private readonly SequenceGenerator $sequences) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -125,12 +124,28 @@ class ArticleService
     }
 
     /**
-     * Un article a des mouvements s'il porte du stock ou a déjà été mouvementé.
-     * Le module Entrées complétera cette règle quand ces données existeront.
+     * Un article « a des mouvements » dès qu'une entrée (même en brouillon) le mentionne.
      */
     private function hasMovements(Article $article): bool
     {
-        return false;
+        return StockEntryLine::query()->where('article_id', $article->id)->exists();
+    }
+
+
+
+        /**
+     * Change le prix de vente en gardant la trace dans l'historique (utilisé aussi par les entrées de stock).
+     */
+    public function changeSalePrice(Article $article, string $newPrice): void
+    {
+        $oldPrice = (string) $article->sale_price;
+
+        if (bccomp($oldPrice, $newPrice, 4) === 0) {
+            return;
+        }
+
+        $article->forceFill(['sale_price' => $newPrice])->save();
+        $this->recordPrice($article, $oldPrice, $newPrice);
     }
 
     private function recordPrice(Article $article, ?string $oldPrice, string $newPrice): void
@@ -163,7 +178,7 @@ class ArticleService
         }
     }
 
-        /**
+    /**
      * @template T
      *
      * @param  Closure(): T  $callback

@@ -36,4 +36,22 @@ enum TenantRole: string
     {
         return in_array($this, [self::Owner, self::Admin, self::StockManager], true);
     }
+
+
+
+        /**
+     * Peut gérer le stock (entrées, et plus tard sorties et inventaires).
+     */
+    public function canManageStock(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin, self::StockManager], true);
+    }
+
+    /**
+     * Peut voir les prix d'achat, les coûts et la valeur du stock.
+     */
+    public function canViewCosts(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin, self::StockManager], true);
+    }
 }

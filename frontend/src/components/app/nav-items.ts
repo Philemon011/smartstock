@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Package,
+  PackagePlus,
   Ruler,
   Tags,
   Truck,
@@ -12,6 +13,8 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Droit exigé, fourni par le serveur : l'entrée du menu n'apparaît que si la personne l'a. */
+  ability?: "manage_stock";
 };
 
 export type NavGroup = {
@@ -35,6 +38,9 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Stock",
-    items: [{ href: "/warehouses", label: "Entrepôts", icon: Warehouse }],
+    items: [
+      { href: "/stock-entries", label: "Entrées", icon: PackagePlus, ability: "manage_stock" },
+      { href: "/warehouses", label: "Entrepôts", icon: Warehouse },
+    ],
   },
 ];

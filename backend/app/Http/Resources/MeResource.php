@@ -3,11 +3,12 @@
 namespace App\Http\Resources;
 
 use App\Models\TenantUser;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\User
+ * @mixin User
  */
 class MeResource extends JsonResource
 {
@@ -29,6 +30,10 @@ class MeResource extends JsonResource
                 'role' => $membership->role->value,
                 'role_label' => $membership->role->label(),
                 'status' => $membership->status->value,
+                'abilities' => [
+                    'manage_stock' => $membership->role->canManageStock(),
+                    'view_costs' => $membership->role->canViewCosts(),
+                ],
                 'tenant' => [
                     'id' => $membership->tenant->id,
                     'name' => $membership->tenant->name,

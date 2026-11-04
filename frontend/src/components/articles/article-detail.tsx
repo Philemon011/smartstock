@@ -17,6 +17,7 @@ import { useArticle, useArticleMutations, usePriceHistory } from "@/hooks/use-ar
 import { ApiError } from "@/lib/api/client";
 import { formatDateTime, formatMoney, formatQuantity } from "@/lib/format";
 import { Package } from "lucide-react";
+import { ArticleStockPanel } from "@/components/articles/article-stock-panel";
 
 function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : "Une erreur inattendue est survenue. Réessayez.";
@@ -267,22 +268,14 @@ export function ArticleDetail({ id }: { id: string }) {
         )}
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section className="rounded-xl border bg-card p-6 shadow-card">
-          <h2 className="text-lg">Historique des prix de vente</h2>
-          <div className="mt-5">
-            <PriceHistory articleId={article.id} currency={tenant.currency} />
-          </div>
-        </section>
+      <ArticleStockPanel article={article} />
 
-        <section className="rounded-xl border border-dashed p-6">
-          <h2 className="text-lg">Stock</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Le stock par entrepôt, les lots avec leurs prix d&apos;achat et leurs dates d&apos;expiration
-            apparaîtront ici dès les premières entrées.
-          </p>
-        </section>
-      </div>
+      <section className="rounded-xl border bg-card p-6 shadow-card">
+        <h2 className="text-lg">Historique des prix de vente</h2>
+        <div className="mt-5">
+          <PriceHistory articleId={article.id} currency={tenant.currency} />
+        </div>
+      </section>
 
       <ConfirmDialog
         open={confirmDelete}
