@@ -42,4 +42,21 @@ return [
         'CAD' => 'Dollar canadien',
         'USD' => 'Dollar américain',
     ],
+
+        // Nombre de décimales d'un montant, par devise.
+    'currency_decimals' => [
+        'XOF' => 0,
+        'XAF' => 0,
+        'CDF' => 2,
+        'GNF' => 0,
+        'GHS' => 2,
+        'NGN' => 2,
+        'MAD' => 2,
+        'DZD' => 2,
+        'TND' => 3,
+        'EUR' => 2,
+        'CHF' => 2,
+        'CAD' => 2,
+        'USD' => 2,
+    ],
 ];

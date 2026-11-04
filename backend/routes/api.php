@@ -12,11 +12,21 @@ use App\Http\Controllers\Api\V1\Meta\CountriesController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\UnitController;
+use App\Http\Controllers\Api\V1\ArticleController;
+use App\Http\Controllers\Api\V1\ArticleImageController;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('meta/countries', CountriesController::class)
         ->middleware('throttle:60,1')
         ->name('meta.countries');
+
+
+    
+    Route::get('files/articles/{article}/image', [ArticleImageController::class, 'show'])
+        ->middleware(['signed', 'throttle:240,1'])
+        ->name('articles.image');
 
     Route::prefix('auth')->group(function (): void {
         Route::post('register', RegisterController::class)
@@ -64,5 +74,24 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('categories', CategoryController::class);
         Route::post('categories/{category}/activate', [CategoryController::class, 'activate'])->name('categories.activate');
         Route::post('categories/{category}/deactivate', [CategoryController::class, 'deactivate'])->name('categories.deactivate');
+
+        
+        Route::apiResource('suppliers', SupplierController::class);
+        Route::post('suppliers/{supplier}/activate', [SupplierController::class, 'activate'])->name('suppliers.activate');
+        Route::post('suppliers/{supplier}/deactivate', [SupplierController::class, 'deactivate'])->name('suppliers.deactivate');
+
+        
+        Route::apiResource('units', UnitController::class);
+        Route::post('units/{unit}/activate', [UnitController::class, 'activate'])->name('units.activate');
+        Route::post('units/{unit}/deactivate', [UnitController::class, 'deactivate'])->name('units.deactivate');
+
+
+        
+        Route::apiResource('articles', ArticleController::class);
+        Route::post('articles/{article}/activate', [ArticleController::class, 'activate'])->name('articles.activate');
+        Route::post('articles/{article}/deactivate', [ArticleController::class, 'deactivate'])->name('articles.deactivate');
+        Route::get('articles/{article}/price-history', [ArticleController::class, 'priceHistory'])->name('articles.price-history');
+        Route::post('articles/{article}/image', [ArticleImageController::class, 'store'])->name('articles.image.store');
+        Route::delete('articles/{article}/image', [ArticleImageController::class, 'destroy'])->name('articles.image.destroy');
     });
 });

@@ -42,6 +42,9 @@ class RegisterTenant
                 'is_main' => true,
             ])->save();
 
+            // Les unités de mesure courantes sont prêtes dès l'inscription.
+            app(CreateDefaultUnits::class)->handle($tenant);
+
             return ['user' => $user, 'tenant' => $tenant];
         });
     }

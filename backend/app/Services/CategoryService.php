@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\BusinessRuleException;
+use App\Models\Article;
 use App\Models\Category;
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
@@ -123,7 +124,7 @@ class CategoryService
      */
     private function isUsed(Category $category): bool
     {
-        return false;
+        return Article::query()->where('category_id', $category->id)->exists();
     }
 
     private function assertValidParent(string $parentId, ?Category $self): void

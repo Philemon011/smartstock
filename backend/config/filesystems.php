@@ -14,6 +14,9 @@ return [
     */
 
     'default' => env('FILESYSTEM_DISK', 'local'),
+    
+    // Disque des fichiers privés de l'application (photos, bons d'entrée…).
+    'files_disk' => env('FILES_DISK', 'local'),
 
     /*
     |--------------------------------------------------------------------------
