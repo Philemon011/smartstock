@@ -17,7 +17,7 @@ export function UserMenu() {
   const { user } = session.me;
 
   return (
-    <DropdownMenu.Root>
+      <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"

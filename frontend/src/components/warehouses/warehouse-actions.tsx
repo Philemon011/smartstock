@@ -47,14 +47,14 @@ export function WarehouseActions({ warehouse, busy, handlers }: WarehouseActions
           variant="ghost"
           size="sm"
           className="size-9 px-0"
-          aria-label={`Actions pour ${warehouse.name}`}
-          disabled={busy}
+                    aria-label={`Actions pour ${warehouse.name}`}
+          aria-busy={busy || undefined}
         >
           <MoreHorizontal strokeWidth={1.5} />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent>
+      <DropdownMenuContent className={busy ? "pointer-events-none opacity-60" : undefined}>
         {canEdit ? (
           <DropdownMenuItem icon={Pencil} onSelect={() => handlers.onEdit(warehouse)}>
             Modifier

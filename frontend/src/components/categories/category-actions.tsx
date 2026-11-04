@@ -45,13 +45,13 @@ export function CategoryActions({ category, busy, handlers }: CategoryActionsPro
           size="sm"
           className="size-9 px-0"
           aria-label={`Actions pour ${category.name}`}
-          disabled={busy}
+          aria-busy={busy || undefined}
         >
           <MoreHorizontal strokeWidth={1.5} />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent>
+            <DropdownMenuContent className={busy ? "pointer-events-none opacity-60" : undefined}>
         {can.update ? (
           <DropdownMenuItem icon={Pencil} onSelect={() => handlers.onEdit(category)}>
             Modifier

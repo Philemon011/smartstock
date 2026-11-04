@@ -170,6 +170,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { method = "GET", body, signal } = options;
   const isWrite = method !== "GET";
+  const isForm = body instanceof FormData;
 
   async function send(): Promise<Response> {
     if (isWrite) {
@@ -183,11 +184,12 @@ export async function apiRequest<T>(
       method,
       headers: {
         Accept: "application/json",
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        // Pour un fichier, le navigateur fixe lui-même le type et la séparation des parties.
+        ...(body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
         ...(xsrfToken ? { "X-XSRF-TOKEN": xsrfToken } : {}),
         ...(activeTenantId ? { "X-Tenant-Id": activeTenantId } : {}),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       credentials: "include",
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
