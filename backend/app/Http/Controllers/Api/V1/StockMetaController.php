@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\StockEntryReason;
 use App\Enums\StockEntryStatus;
+use App\Enums\StockExitReason;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 
@@ -13,6 +14,13 @@ class StockMetaController extends Controller
     {
         return response()
             ->json([
+                'exit_reasons' => array_map(fn (StockExitReason $reason) => [
+                    'value' => $reason->value,
+                    'label' => $reason->label(),
+                    'requires_supplier' => $reason->requiresSupplier(),
+                    'requires_notes' => $reason->requiresNotes(),
+                    'expired_only' => $reason->onlyExpiredLots(),
+                ], StockExitReason::cases()),
                 'entry_reasons' => collect(StockEntryReason::cases())->map(fn (StockEntryReason $reason): array => [
                     'value' => $reason->value,
                     'label' => $reason->label(),

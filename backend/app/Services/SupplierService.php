@@ -11,6 +11,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\StockEntry;
+use App\Models\StockExit;
 
 class SupplierService
 {
@@ -81,7 +82,7 @@ class SupplierService
      */
         private function isUsed(Supplier $supplier): bool
     {
-        return StockEntry::query()->where('supplier_id', $supplier->id)->exists();
+        return StockEntry::query()->where('supplier_id', $supplier->id)->exists()|| StockExit::query()->where('supplier_id', $supplier->id)->exists();
     }
 
     /**

@@ -47,6 +47,15 @@ enum TenantRole: string
         return in_array($this, [self::Owner, self::Admin, self::StockManager], true);
     }
 
+
+        /**
+     * Peut vendre et gérer les clients.
+     */
+    public function canSell(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin, self::Seller], true);
+    }
+
     /**
      * Peut voir les prix d'achat, les coûts et la valeur du stock.
      */

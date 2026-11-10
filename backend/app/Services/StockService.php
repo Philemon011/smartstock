@@ -6,6 +6,12 @@ use App\Models\StockEntry;
 use App\Models\StockEntryLine;
 use App\Models\StockLot;
 use App\Models\StockMovement;
+use App\Models\StockExit;
+use App\Models\StockExitLine;
+use App\Models\StockExitAllocation;
+use App\Exceptions\BusinessRuleException;
+use App\Support\Money;
+
 use Illuminate\Support\Facades\Auth;
 
 class StockService
@@ -67,5 +73,69 @@ class StockService
             'stock_entry_id' => $entry->id,
             'created_by' => Auth::id(),
         ])->save();
+    }
+
+
+        /**
+     * Prélève une quantité d'un lot pour une sortie validée et garde la trace exacte du prélèvement.
+     */
+    public function issue(StockExit $exit, StockExitLine $line, StockLot $lot, string $quantity, string $currency): StockExitAllocation
+    {
+        $lot->forceFill([
+            'quantity_remaining' => bcsub((string) $lot->quantity_remaining, $quantity, 3),
+        ])->save();
+
+        $value = Money::round(bcmul($quantity, (string) $lot->unit_cost, 9), Money::decimals($currency));
+
+        $allocation = (new StockExitAllocation)->forceFill([
+            'tenant_id' => $exit->tenant_id,
+            'stock_exit_line_id' => $line->id,
+            'lot_id' => $lot->id,
+            'quantity' => $quantity,
+            'unit_cost' => $lot->unit_cost,
+            'value' => $value,
+        ]);
+        $allocation->save();
+
+        $this->recordExit('exit', $exit, $lot, bcmul($quantity, '-1', 3), (string) $lot->unit_cost);
+
+        return $allocation;
+    }
+
+    /**
+     * Remet dans son lot d'origine la quantité d'un prélèvement (annulation d'une sortie).
+     */
+    public function restore(StockExit $exit, StockExitAllocation $allocation): void
+    {
+        $lot = StockLot::query()->lockForUpdate()->findOrFail($allocation->lot_id);
+
+        if ($lot->voided_at !== null) {
+            throw new BusinessRuleException(
+                "Le lot {$lot->code} a été annulé : cette sortie ne peut plus être annulée.",
+                'lot_voided',
+            );
+        }
+
+        $lot->forceFill([
+            'quantity_remaining' => bcadd((string) $lot->quantity_remaining, (string) $allocation->quantity, 3),
+        ])->save();
+
+        $this->recordExit('exit_cancellation', $exit, $lot, (string) $allocation->quantity, (string) $allocation->unit_cost);
+    }
+
+    private function recordExit(string $type, StockExit $exit, StockLot $lot, string $quantity, string $unitCost): void
+    {
+        $movement = (new StockMovement)->forceFill([
+            'tenant_id' => $exit->tenant_id,
+            'type' => $type,
+            'article_id' => $lot->article_id,
+            'warehouse_id' => $lot->warehouse_id,
+            'lot_id' => $lot->id,
+            'quantity' => $quantity,
+            'unit_cost' => $unitCost,
+            'stock_exit_id' => $exit->id,
+            'created_by' => auth()->id(),
+        ]);
+        $movement->save();
     }
 }

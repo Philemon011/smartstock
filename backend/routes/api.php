@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\ArticleController;
 use App\Http\Controllers\Api\V1\ArticleImageController;
 use App\Http\Controllers\Api\V1\ArticleStockController;
@@ -12,14 +13,17 @@ use App\Http\Controllers\Api\V1\Auth\ResendVerificationEmailController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\Meta\CountriesController;
 use App\Http\Controllers\Api\V1\StockEntryController;
 use App\Http\Controllers\Api\V1\StockEntryDocumentController;
+use App\Http\Controllers\Api\V1\StockExitController;
 use App\Http\Controllers\Api\V1\StockMetaController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\CustomerController;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('meta/countries', CountriesController::class)
@@ -104,5 +108,20 @@ Route::prefix('v1')->group(function (): void {
         Route::post('stock-entries/{stock_entry}/cancel', [StockEntryController::class, 'cancel'])->name('stock-entries.cancel');
         Route::post('stock-entries/{stock_entry}/document', [StockEntryDocumentController::class, 'store'])->name('stock-entries.document.store');
         Route::delete('stock-entries/{stock_entry}/document', [StockEntryDocumentController::class, 'destroy'])->name('stock-entries.document.destroy');
+
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('alerts/summary', [AlertController::class, 'summary'])->name('alerts.summary');
+        Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
+
+        Route::apiResource('stock-exits', StockExitController::class)
+            ->parameters(['stock-exits' => 'stock_exit'])
+            ->names('stock-exits');
+        Route::post('stock-exits/{stock_exit}/validate', [StockExitController::class, 'validateExit'])->name('stock-exits.validate');
+        Route::post('stock-exits/{stock_exit}/cancel', [StockExitController::class, 'cancel'])->name('stock-exits.cancel');
+
+
+                Route::apiResource('customers', CustomerController::class);
+        Route::post('customers/{customer}/activate', [CustomerController::class, 'activate'])->name('customers.activate');
+        Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])->name('customers.deactivate');
     });
 });

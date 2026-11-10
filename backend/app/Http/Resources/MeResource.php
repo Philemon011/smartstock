@@ -32,6 +32,7 @@ class MeResource extends JsonResource
                 'status' => $membership->status->value,
                 'abilities' => [
                     'manage_stock' => $membership->role->canManageStock(),
+                    'sell' => $membership->role->canSell(),
                     'view_costs' => $membership->role->canViewCosts(),
                 ],
                 'tenant' => [

@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\ArticlePackaging;
 use App\Models\ArticlePriceChange;
 use App\Models\StockEntryLine;
+use App\Models\StockExitLine;
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
 use Closure;
@@ -128,7 +129,7 @@ class ArticleService
      */
     private function hasMovements(Article $article): bool
     {
-        return StockEntryLine::query()->where('article_id', $article->id)->exists();
+        return StockEntryLine::query()->where('article_id', $article->id)->exists() || StockExitLine::query()->where('article_id', $article->id)->exists();
     }
 
 
