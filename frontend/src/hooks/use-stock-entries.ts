@@ -62,11 +62,13 @@ export function useStockEntryMutations() {
     queryClient.invalidateQueries({ queryKey: ["stock-entries", tenant.id] });
 
   // Valider ou annuler une entrée change le stock et peut changer le prix de vente des articles.
-  const invalidateStock = async () => {
+    const invalidateStock = async () => {
     await Promise.all([
       invalidateEntries(),
       queryClient.invalidateQueries({ queryKey: ["articles", tenant.id] }),
       queryClient.invalidateQueries({ queryKey: ["warehouses", tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ["alerts", tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard", tenant.id] }),
     ]);
   };
 

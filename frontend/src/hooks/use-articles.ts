@@ -49,7 +49,12 @@ export function useArticleMutations() {
   const { tenant } = useActiveMembership();
   const queryClient = useQueryClient();
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["articles", tenant.id] });
+    const invalidate = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["articles", tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ["alerts", tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard", tenant.id] }),
+    ]);
 
   return {
     create: useMutation({

@@ -108,7 +108,14 @@ export type StockMeta = {
     requires_supplier: boolean;
     allows_zero_price: boolean;
   }[];
-  entry_statuses: { value: StockEntryStatus; label: string }[];
+    entry_statuses: { value: StockEntryStatus; label: string }[];
+  exit_reasons: {
+    value: string;
+    label: string;
+    requires_supplier: boolean;
+    requires_notes: boolean;
+    expired_only: boolean;
+  }[];
 };
 
 const BASE = "/api/v1/stock-entries";

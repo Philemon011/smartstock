@@ -45,8 +45,9 @@ export type Membership = {
   role: MembershipRole;
   role_label: string;
   status: MembershipStatus;
-    abilities: {
+      abilities: {
     manage_stock: boolean;
+    sell: boolean;
     view_costs: boolean;
   };
   tenant: TenantSummary;

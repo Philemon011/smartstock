@@ -1,10 +1,13 @@
 import {
+  Bell,
   LayoutDashboard,
   Package,
+  PackageMinus,
   PackagePlus,
   Ruler,
   Tags,
   Truck,
+  Users,
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
@@ -14,7 +17,9 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   /** Droit exigé, fourni par le serveur : l'entrée du menu n'apparaît que si la personne l'a. */
-  ability?: "manage_stock";
+    ability?: "manage_stock" | "sell";
+  /** Pastille de compteur affichée à droite. */
+  badge?: "alerts";
 };
 
 export type NavGroup = {
@@ -40,7 +45,13 @@ export const navGroups: NavGroup[] = [
     label: "Stock",
     items: [
       { href: "/stock-entries", label: "Entrées", icon: PackagePlus, ability: "manage_stock" },
+      { href: "/stock-exits", label: "Sorties", icon: PackageMinus, ability: "manage_stock" },
+      { href: "/alerts", label: "Alertes", icon: Bell, badge: "alerts" },
       { href: "/warehouses", label: "Entrepôts", icon: Warehouse },
     ],
+  },
+    {
+    label: "Ventes",
+    items: [{ href: "/customers", label: "Clients", icon: Users }],
   },
 ];
