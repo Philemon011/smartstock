@@ -11,6 +11,9 @@ use App\Models\StockExitLine;
 use App\Models\StockExitAllocation;
 use App\Exceptions\BusinessRuleException;
 use App\Support\Money;
+use App\Models\Sale;
+use App\Models\SaleAllocation;
+use App\Models\SaleLine;
 
 use Illuminate\Support\Facades\Auth;
 
@@ -137,5 +140,70 @@ class StockService
             'created_by' => auth()->id(),
         ]);
         $movement->save();
+    }
+
+        /**
+     * Prélève une quantité d'un lot pour une vente et garde la trace exacte du prélèvement.
+     */
+    public function sell(Sale $sale, SaleLine $line, StockLot $lot, string $quantity, string $cost): SaleAllocation
+    {
+        $locked = StockLot::query()->lockForUpdate()->findOrFail($lot->id);
+
+        $locked->forceFill([
+            'quantity_remaining' => bcsub((string) $locked->quantity_remaining, $quantity, 3),
+        ])->save();
+
+        $allocation = (new SaleAllocation)->forceFill([
+            'tenant_id' => $sale->tenant_id,
+            'sale_line_id' => $line->id,
+            'lot_id' => $locked->id,
+            'quantity' => $quantity,
+            'unit_cost' => $locked->unit_cost,
+            'cost' => $cost,
+        ]);
+        $allocation->save();
+
+        $this->recordSale('sale', $sale, $locked, bcmul($quantity, '-1', 3), (string) $locked->unit_cost);
+
+        return $allocation;
+    }
+
+    private function recordSale(string $type, Sale $sale, StockLot $lot, string $quantity, string $unitCost): void
+    {
+        $movement = (new StockMovement)->forceFill([
+            'tenant_id' => $sale->tenant_id,
+            'type' => $type,
+            'article_id' => $lot->article_id,
+            'warehouse_id' => $lot->warehouse_id,
+            'lot_id' => $lot->id,
+            'quantity' => $quantity,
+            'unit_cost' => $unitCost,
+            'sale_id' => $sale->id,
+            'created_by' => auth()->id(),
+        ]);
+        $movement->save();
+    }
+
+
+
+        /**
+     * Remet dans son lot d'origine la quantité d'un prélèvement (annulation d'une vente).
+     */
+    public function restoreSale(Sale $sale, SaleAllocation $allocation): void
+    {
+        $lot = StockLot::query()->lockForUpdate()->findOrFail($allocation->lot_id);
+
+        if ($lot->voided_at !== null) {
+            throw new BusinessRuleException(
+                "Le lot {$lot->code} a été annulé : cette vente ne peut plus être annulée.",
+                'lot_voided',
+            );
+        }
+
+        $lot->forceFill([
+            'quantity_remaining' => bcadd((string) $lot->quantity_remaining, (string) $allocation->quantity, 3),
+        ])->save();
+
+        $this->recordSale('sale_cancellation', $sale, $lot, (string) $allocation->quantity, (string) $allocation->unit_cost);
     }
 }

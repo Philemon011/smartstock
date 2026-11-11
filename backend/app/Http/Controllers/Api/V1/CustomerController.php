@@ -7,6 +7,7 @@ use App\Http\Requests\CustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use App\Services\CustomerService;
+use App\Services\SaleService;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,10 @@ class CustomerController extends Controller
 
     private const MAX_PER_PAGE = 100;
 
-    public function __construct(private readonly CustomerService $customers)
-    {
+    public function __construct(
+        private readonly CustomerService $customers,
+        private readonly SaleService $sales,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -55,6 +58,12 @@ class CustomerController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        $balances = $this->sales->balances($customers->getCollection()->pluck('id')->all());
+
+        $customers->getCollection()->each(
+            fn (Customer $customer) => $customer->setAttribute('balance_due', $balances[$customer->id]),
+        );
+
         return CustomerResource::collection($customers)->additional([
             'meta' => [
                 'can' => [
@@ -69,19 +78,19 @@ class CustomerController extends Controller
     {
         Gate::authorize('view', $customer);
 
-        return CustomerResource::make($customer);
+        return CustomerResource::make($this->withBalance($customer));
     }
 
     public function store(CustomerRequest $request): JsonResponse
     {
         $customer = $this->customers->create($request->validated());
 
-        return CustomerResource::make($customer)->response()->setStatusCode(201);
+        return CustomerResource::make($this->withBalance($customer))->response()->setStatusCode(201);
     }
 
     public function update(CustomerRequest $request, Customer $customer): CustomerResource
     {
-        return CustomerResource::make($this->customers->update($customer, $request->validated()));
+        return CustomerResource::make($this->withBalance($this->customers->update($customer, $request->validated())));
     }
 
     public function destroy(Customer $customer): Response
@@ -97,13 +106,20 @@ class CustomerController extends Controller
     {
         Gate::authorize('activate', $customer);
 
-        return CustomerResource::make($this->customers->activate($customer));
+        return CustomerResource::make($this->withBalance($this->customers->activate($customer)));
     }
 
     public function deactivate(Customer $customer): CustomerResource
     {
         Gate::authorize('deactivate', $customer);
 
-        return CustomerResource::make($this->customers->deactivate($customer));
+        return CustomerResource::make($this->withBalance($this->customers->deactivate($customer)));
+    }
+
+    private function withBalance(Customer $customer): Customer
+    {
+        $customer->setAttribute('balance_due', $this->sales->balances([$customer->id])[$customer->id]);
+
+        return $customer;
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\StockEntry;
 use App\Models\StockExit;
 use App\Models\StockLot;
+use App\Models\Sale;
 
 class WarehouseService
 {
@@ -133,7 +134,9 @@ class WarehouseService
      */
         private function isUsed(Warehouse $warehouse): bool
     {
-        return StockEntry::query()->where('warehouse_id', $warehouse->id)->exists() || StockExit::query()->where('warehouse_id', $warehouse->id)->exists();
+                return StockEntry::query()->where('warehouse_id', $warehouse->id)->exists()
+            || StockExit::query()->where('warehouse_id', $warehouse->id)->exists()
+            || Sale::query()->where('warehouse_id', $warehouse->id)->exists();
     }
 
     /**

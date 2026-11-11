@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Models\SaleLine;
 
 class ArticleService
 {
@@ -125,11 +126,13 @@ class ArticleService
     }
 
     /**
-     * Un article « a des mouvements » dès qu'une entrée (même en brouillon) le mentionne.
+     * Un article « a des mouvements »  dès qu’une entrée, une sortie ou une vente (même en brouillon) le mentionne.
      */
     private function hasMovements(Article $article): bool
     {
-        return StockEntryLine::query()->where('article_id', $article->id)->exists() || StockExitLine::query()->where('article_id', $article->id)->exists();
+                return StockEntryLine::query()->where('article_id', $article->id)->exists()
+            || StockExitLine::query()->where('article_id', $article->id)->exists()
+            || SaleLine::query()->where('article_id', $article->id)->exists();
     }
 
 

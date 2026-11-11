@@ -7,6 +7,8 @@ use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use App\Models\Sale; 
+ use App\Exceptions\BusinessRuleException;
 
 class CustomerService
 {
@@ -55,10 +57,18 @@ class CustomerService
         });
     }
 
-    public function delete(Customer $customer): void
+        public function delete(Customer $customer): void
     {
         $this->atomically(function () use ($customer): void {
             $customer->refresh();
+
+            if (Sale::query()->where('customer_id', $customer->id)->exists()) {
+                throw new BusinessRuleException(
+                    'Ce client a déjà des ventes. Désactivez-le plutôt que de le supprimer.',
+                    'customer_used',
+                );
+            }
+
             $customer->delete();
         });
     }

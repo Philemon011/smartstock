@@ -32,6 +32,7 @@ class CustomerResource extends JsonResource
             'credit_limit' => $this->credit_limit !== null
                 ? Money::normalize((string) $this->credit_limit, $current->tenant()->currency)
                 : null,
+                            'balance_due' => $this->getAttribute('balance_due'),
             'is_active' => $this->is_active,
             'created_at' => $this->created_at?->toIso8601String(),
             'can' => [

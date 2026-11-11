@@ -13,8 +13,11 @@ use App\Http\Controllers\Api\V1\Auth\ResendVerificationEmailController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\Meta\CountriesController;
+use App\Http\Controllers\Api\V1\SaleController;
+use App\Http\Controllers\Api\V1\SaleMetaController;
 use App\Http\Controllers\Api\V1\StockEntryController;
 use App\Http\Controllers\Api\V1\StockEntryDocumentController;
 use App\Http\Controllers\Api\V1\StockExitController;
@@ -23,7 +26,7 @@ use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\SalePaymentController;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('meta/countries', CountriesController::class)
@@ -37,6 +40,10 @@ Route::prefix('v1')->group(function (): void {
     Route::get('meta/stock', StockMetaController::class)
         ->middleware('throttle:60,1')
         ->name('meta.stock');
+
+    Route::get('meta/sales', SaleMetaController::class)
+        ->middleware('throttle:60,1')
+        ->name('meta.sales');
 
     Route::get('files/stock-entries/{entry}/document', [StockEntryDocumentController::class, 'show'])
         ->middleware(['signed', 'throttle:240,1'])
@@ -119,9 +126,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('stock-exits/{stock_exit}/validate', [StockExitController::class, 'validateExit'])->name('stock-exits.validate');
         Route::post('stock-exits/{stock_exit}/cancel', [StockExitController::class, 'cancel'])->name('stock-exits.cancel');
 
-
-                Route::apiResource('customers', CustomerController::class);
+        Route::apiResource('customers', CustomerController::class);
         Route::post('customers/{customer}/activate', [CustomerController::class, 'activate'])->name('customers.activate');
         Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])->name('customers.deactivate');
+
+        Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
+                Route::post('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
+        Route::post('sales/{sale}/payments', [SalePaymentController::class, 'store'])->name('sales.payments.store');
+        Route::post('sales/{sale}/payments/{payment}/void', [SalePaymentController::class, 'void'])->name('sales.payments.void');
+        Route::post('customers/{customer}/payments', [SalePaymentController::class, 'storeForCustomer'])->name('customers.payments.store');
     });
 });
