@@ -722,15 +722,10 @@ export function SaleDetail({ id }: { id: string }) {
             </Button>
           ) : null}
 
-          <Link
-            href={`/sales/${sale.id}/receipt`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: "secondary" })}
-          >
+                    <Link href={`/sales/${sale.id}/receipt`} className={buttonVariants({ variant: "secondary" })}>
             <span className="inline-flex items-center gap-2">
               <Printer className="size-4" strokeWidth={1.5} aria-hidden />
-              Ticket
+              Reçu
             </span>
           </Link>
 
