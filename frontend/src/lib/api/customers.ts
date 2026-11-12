@@ -18,6 +18,8 @@ export type Customer = {
   notes: string | null;
   /** Null : pas de plafond. "0" : aucun crédit autorisé. */
   credit_limit: string | null;
+    /** Ce que le client doit sur ses ventes validées. */
+  balance_due: string | null;
   is_active: boolean;
   created_at: string | null;
   can: CustomerAbilities;
@@ -37,6 +39,7 @@ export type CustomerInput = {
   notes: string | null;
   /** Absent pour les rôles qui n'ont pas le droit de définir le plafond. */
   credit_limit?: string | null;
+  
 };
 
 export type CustomerStatusFilter = "all" | "active" | "inactive";

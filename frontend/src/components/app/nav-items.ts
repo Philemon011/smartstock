@@ -4,7 +4,9 @@ import {
   Package,
   PackageMinus,
   PackagePlus,
+  Receipt,
   Ruler,
+  ShoppingCart,
   Tags,
   Truck,
   Users,
@@ -20,6 +22,10 @@ export type NavItem = {
     ability?: "manage_stock" | "sell";
   /** Pastille de compteur affichée à droite. */
   badge?: "alerts";
+    /** Actif uniquement sur cette page exacte, pas sur ses sous-pages. */
+  exact?: boolean;
+  /** Chemins qui ne doivent pas activer ce lien. */
+  exclude?: string[];
 };
 
 export type NavGroup = {
@@ -52,6 +58,10 @@ export const navGroups: NavGroup[] = [
   },
     {
     label: "Ventes",
-    items: [{ href: "/customers", label: "Clients", icon: Users }],
+    items: [
+      { href: "/sales/new", label: "Caisse", icon: ShoppingCart, ability: "sell", exact: true },
+      { href: "/sales", label: "Ventes", icon: Receipt, exclude: ["/sales/new"] },
+      { href: "/customers", label: "Clients", icon: Users },
+    ],
   },
 ];

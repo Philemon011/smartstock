@@ -25,11 +25,21 @@ type CustomerSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer: Customer | null;
+  /** Appelé avec le client créé (pour le sélectionner tout de suite dans une vente). */
+  onCreated?: (customer: Customer) => void;
 };
 
 const emptyToNull = (value: string): string | null => (value.trim() === "" ? null : value);
 
-function CustomerForm({ customer, onClose }: { customer: Customer | null; onClose: () => void }) {
+function CustomerForm({
+  customer,
+  onClose,
+  onCreated,
+}: {
+  customer: Customer | null;
+  onClose: () => void;
+  onCreated?: (customer: Customer) => void;
+}) {
   const { tenant, role } = useActiveMembership();
   const mutations = useCustomerMutations();
   const formRef = useRef<HTMLFormElement>(null);
@@ -82,8 +92,9 @@ function CustomerForm({ customer, onClose }: { customer: Customer | null; onClos
         await mutations.update.mutateAsync({ id: customer.id, input });
         toast.success("Client modifié.");
       } else {
-        await mutations.create.mutateAsync(input);
+                const created = await mutations.create.mutateAsync(input);
         toast.success("Client créé.");
+        onCreated?.(created);
       }
 
       onClose();
@@ -221,14 +232,14 @@ function CustomerForm({ customer, onClose }: { customer: Customer | null; onClos
   );
 }
 
-export function CustomerSheet({ open, onOpenChange, customer }: CustomerSheetProps) {
+export function CustomerSheet({ open, onOpenChange, customer, onCreated }: CustomerSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         title={customer ? "Modifier le client" : "Nouveau client"}
         description="Les coordonnées de celui à qui vous vendez."
       >
-        <CustomerForm customer={customer} onClose={() => onOpenChange(false)} />
+        <CustomerForm customer={customer} onClose={() => onOpenChange(false)} onCreated={onCreated} />
       </SheetContent>
     </Sheet>
   );

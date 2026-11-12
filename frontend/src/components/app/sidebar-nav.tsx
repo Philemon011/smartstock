@@ -30,7 +30,13 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
             <ul className="space-y-1">
               {items.map((item) => {
-                const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                                const active =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : item.exact
+                      ? pathname === item.href
+                      : pathname.startsWith(item.href) &&
+                        !(item.exclude ?? []).some((path) => pathname.startsWith(path));
                 const count = item.badge === "alerts" ? alertsTotal : 0;
 
                 return (
