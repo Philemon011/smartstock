@@ -46,6 +46,13 @@ class CustomerController extends Controller
         $customers = Customer::query()
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
             ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
+                        ->when($request->boolean('has_balance'), fn ($query) => $query->whereExists(
+                fn ($sub) => $sub->selectRaw('1')
+                    ->from('sales')
+                    ->whereColumn('sales.customer_id', 'customers.id')
+                    ->where('sales.status', 'validated')
+                    ->whereColumn('sales.total', '>', 'sales.amount_paid'),
+            ))
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $query
                     ->where('name_key', 'like', '%'.addcslashes(Customer::keyFor($search), '%_\\').'%')

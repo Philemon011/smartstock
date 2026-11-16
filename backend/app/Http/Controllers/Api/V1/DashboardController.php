@@ -82,6 +82,51 @@ class DashboardController extends Controller
             ];
         }
 
+                $sales = null;
+
+        if ($role->canSell()) {
+            $today = $this->alerts->today();
+            $monthStart = Carbon::parse($today)->startOfMonth()->toDateString();
+
+            $period = fn (string $from) => DB::table('sales')
+                ->where('tenant_id', $tenant->id)
+                ->where('status', 'validated')
+                ->where('sale_date', '>=', $from)
+                ->where('sale_date', '<=', $today)
+                ->selectRaw('COUNT(*) AS count, COALESCE(SUM(total), 0) AS total, COALESCE(SUM(total - cost_total), 0) AS margin')
+                ->first();
+
+            $day = $period($today);
+            $month = $period($monthStart);
+
+            $owed = DB::table('sales')
+                ->where('tenant_id', $tenant->id)
+                ->where('status', 'validated')
+                ->whereColumn('total', '>', 'amount_paid')
+                ->selectRaw('COALESCE(SUM(total - amount_paid), 0) AS due, COUNT(*) AS sales_count, COUNT(DISTINCT customer_id) AS customers_count, MIN(sale_date) AS oldest')
+                ->first();
+
+            $sales = [
+                'today' => [
+                    'count' => (int) $day->count,
+                    'total' => Money::normalize((string) $day->total, $tenant->currency),
+                ],
+                'month' => [
+                    'count' => (int) $month->count,
+                    'total' => Money::normalize((string) $month->total, $tenant->currency),
+                    'margin' => $role->canViewCosts()
+                        ? Money::normalize((string) $month->margin, $tenant->currency)
+                        : null,
+                ],
+                'receivables' => [
+                    'total_due' => Money::normalize((string) $owed->due, $tenant->currency),
+                    'customers_count' => (int) $owed->customers_count,
+                    'sales_count' => (int) $owed->sales_count,
+                    'oldest_date' => $owed->oldest,
+                ],
+            ];
+        }
+
         return response()->json([
             'data' => [
                 'articles_active' => Article::query()->where('is_active', true)->count(),
@@ -89,7 +134,8 @@ class DashboardController extends Controller
                 'alerts' => $this->alerts->summary(),
                 'stock_value' => $stockValue,
                 'entries' => $entries,
-                'exits' => $exits
+                'exits' => $exits,
+                                'sales' => $sales,
             ],
         ]);
     }
