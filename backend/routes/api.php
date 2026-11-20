@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\SalePaymentController;
+use App\Http\Controllers\Api\V1\CompanyProfileController;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('meta/countries', CountriesController::class)
@@ -36,6 +37,10 @@ Route::prefix('v1')->group(function (): void {
     Route::get('files/articles/{article}/image', [ArticleImageController::class, 'show'])
         ->middleware(['signed', 'throttle:240,1'])
         ->name('articles.image');
+
+        Route::get('files/tenants/{tenant}/logo', [CompanyProfileController::class, 'logo'])
+        ->middleware(['signed', 'throttle:240,1'])
+        ->name('tenants.logo');
 
     Route::get('meta/stock', StockMetaController::class)
         ->middleware('throttle:60,1')
@@ -135,5 +140,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('sales/{sale}/payments', [SalePaymentController::class, 'store'])->name('sales.payments.store');
         Route::post('sales/{sale}/payments/{payment}/void', [SalePaymentController::class, 'void'])->name('sales.payments.void');
         Route::post('customers/{customer}/payments', [SalePaymentController::class, 'storeForCustomer'])->name('customers.payments.store');
+
+
+                Route::get('company-profile', [CompanyProfileController::class, 'show'])->name('company-profile.show');
+        Route::put('company-profile', [CompanyProfileController::class, 'update'])->name('company-profile.update');
+        Route::post('company-profile/logo', [CompanyProfileController::class, 'storeLogo'])->name('company-profile.logo.store');
+        Route::delete('company-profile/logo', [CompanyProfileController::class, 'destroyLogo'])->name('company-profile.logo.destroy');
     });
 });
