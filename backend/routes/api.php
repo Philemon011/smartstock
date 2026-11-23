@@ -13,11 +13,14 @@ use App\Http\Controllers\Api\V1\Auth\ResendVerificationEmailController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\CompanyProfileController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\Meta\CountriesController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\SaleMetaController;
+use App\Http\Controllers\Api\V1\SalePaymentController;
+use App\Http\Controllers\Api\V1\StockAvailabilityController;
 use App\Http\Controllers\Api\V1\StockEntryController;
 use App\Http\Controllers\Api\V1\StockEntryDocumentController;
 use App\Http\Controllers\Api\V1\StockExitController;
@@ -26,8 +29,6 @@ use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\SalePaymentController;
-use App\Http\Controllers\Api\V1\CompanyProfileController;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('meta/countries', CountriesController::class)
@@ -38,7 +39,7 @@ Route::prefix('v1')->group(function (): void {
         ->middleware(['signed', 'throttle:240,1'])
         ->name('articles.image');
 
-        Route::get('files/tenants/{tenant}/logo', [CompanyProfileController::class, 'logo'])
+    Route::get('files/tenants/{tenant}/logo', [CompanyProfileController::class, 'logo'])
         ->middleware(['signed', 'throttle:240,1'])
         ->name('tenants.logo');
 
@@ -136,15 +137,16 @@ Route::prefix('v1')->group(function (): void {
         Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])->name('customers.deactivate');
 
         Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
-                Route::post('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
+        Route::post('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
         Route::post('sales/{sale}/payments', [SalePaymentController::class, 'store'])->name('sales.payments.store');
         Route::post('sales/{sale}/payments/{payment}/void', [SalePaymentController::class, 'void'])->name('sales.payments.void');
         Route::post('customers/{customer}/payments', [SalePaymentController::class, 'storeForCustomer'])->name('customers.payments.store');
 
-
-                Route::get('company-profile', [CompanyProfileController::class, 'show'])->name('company-profile.show');
+        Route::get('company-profile', [CompanyProfileController::class, 'show'])->name('company-profile.show');
         Route::put('company-profile', [CompanyProfileController::class, 'update'])->name('company-profile.update');
         Route::post('company-profile/logo', [CompanyProfileController::class, 'storeLogo'])->name('company-profile.logo.store');
         Route::delete('company-profile/logo', [CompanyProfileController::class, 'destroyLogo'])->name('company-profile.logo.destroy');
+
+        Route::get('stock/articles', StockAvailabilityController::class)->name('stock.articles');
     });
 });
