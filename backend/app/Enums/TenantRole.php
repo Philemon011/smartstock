@@ -56,6 +56,14 @@ enum TenantRole: string
         return in_array($this, [self::Owner, self::Admin, self::Seller], true);
     }
 
+        /**
+     * Peut enregistrer des transferts de stock entre entrepôts.
+     */
+    public function canTransfer(): bool
+    {
+        return in_array($this, [self::Owner, self::Admin, self::StockManager, self::Seller], true);
+    }
+
     /**
      * Peut voir les prix d'achat, les coûts et la valeur du stock.
      */

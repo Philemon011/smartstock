@@ -14,6 +14,7 @@ use App\Models\StockEntry;
 use App\Models\StockExit;
 use App\Models\StockLot;
 use App\Models\Sale;
+use App\Models\StockTransfer;
 
 class WarehouseService
 {
@@ -136,7 +137,8 @@ class WarehouseService
     {
                 return StockEntry::query()->where('warehouse_id', $warehouse->id)->exists()
             || StockExit::query()->where('warehouse_id', $warehouse->id)->exists()
-            || Sale::query()->where('warehouse_id', $warehouse->id)->exists();
+            || Sale::query()->where('warehouse_id', $warehouse->id)->exists()
+                        || StockTransfer::query()->where('from_warehouse_id', $warehouse->id)->orWhere('to_warehouse_id', $warehouse->id)->exists();
     }
 
     /**

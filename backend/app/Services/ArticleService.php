@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use App\Models\SaleLine;
+use App\Models\StockTransferLine;
 
 class ArticleService
 {
@@ -132,7 +133,8 @@ class ArticleService
     {
                 return StockEntryLine::query()->where('article_id', $article->id)->exists()
             || StockExitLine::query()->where('article_id', $article->id)->exists()
-            || SaleLine::query()->where('article_id', $article->id)->exists();
+            || SaleLine::query()->where('article_id', $article->id)->exists()
+                        || StockTransferLine::query()->where('article_id', $article->id)->exists();
     }
 
 

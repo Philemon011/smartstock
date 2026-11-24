@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\StockEntryController;
 use App\Http\Controllers\Api\V1\StockEntryDocumentController;
 use App\Http\Controllers\Api\V1\StockExitController;
 use App\Http\Controllers\Api\V1\StockMetaController;
+use App\Http\Controllers\Api\V1\StockTransferController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\WarehouseController;
@@ -148,5 +149,11 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('company-profile/logo', [CompanyProfileController::class, 'destroyLogo'])->name('company-profile.logo.destroy');
 
         Route::get('stock/articles', StockAvailabilityController::class)->name('stock.articles');
+
+        Route::apiResource('stock-transfers', StockTransferController::class)
+            ->parameters(['stock-transfers' => 'stock_transfer'])
+            ->names('stock-transfers');
+        Route::post('stock-transfers/{stock_transfer}/validate', [StockTransferController::class, 'validateTransfer'])->name('stock-transfers.validate');
+        Route::post('stock-transfers/{stock_transfer}/cancel', [StockTransferController::class, 'cancel'])->name('stock-transfers.cancel');
     });
 });
