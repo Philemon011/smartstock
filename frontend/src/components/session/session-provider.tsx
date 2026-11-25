@@ -22,7 +22,9 @@ type SessionState =
 
 type SessionContextValue = {
   session: SessionState;
-  reload: () => void;
+    reload: () => void;
+  /** Recharge la personne et ses entreprises sans repasser par l'écran de chargement. */
+  refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   signOutError: string | null;
   dismissSignOutError: () => void;
@@ -83,6 +85,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setReloadToken((token) => token + 1);
   }, []);
 
+    const refresh = useCallback(async () => {
+    try {
+      const me = await fetchMe();
+
+      setActiveTenantId(currentMembership(me)?.tenant.id ?? null);
+      setSession({ status: "authenticated", me });
+    } catch {
+      // On garde l'état actuel : la page reste utilisable, la prochaine requête dira ce qui ne va pas.
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     setSignOutError(null);
 
@@ -107,9 +120,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const dismissSignOutError = useCallback(() => setSignOutError(null), []);
 
-  const value = useMemo(
-    () => ({ session, reload, signOut, signOutError, dismissSignOutError }),
-    [session, reload, signOut, signOutError, dismissSignOutError],
+    const value = useMemo(
+    () => ({ session, reload, refresh, signOut, signOutError, dismissSignOutError }),
+    [session, reload, refresh, signOut, signOutError, dismissSignOutError],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

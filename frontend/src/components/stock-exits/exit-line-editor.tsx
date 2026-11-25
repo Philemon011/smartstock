@@ -2,14 +2,21 @@
 
 import { ChevronDown, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useActiveMembership } from "@/components/session/session-provider";
 import { AffixInput } from "@/components/ui/affix-input";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { RemoteCombobox } from "@/components/ui/remote-combobox";
 import { Select } from "@/components/ui/select";
 import { useArticleStock } from "@/hooks/use-stock-entries";
-import { listArticles, type Article } from "@/lib/api/articles";
 import type { StockLot } from "@/lib/api/article-stock";
+import type { Article } from "@/lib/api/articles";
+import {
+  listAvailableArticles,
+  stockHint,
+  toArticle,
+  type AvailableArticle,
+} from "@/lib/api/available-articles";
 import { decimalToString, multiply, parseDecimal } from "@/lib/decimal";
 import { formatDate, formatQuantity } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -25,6 +32,29 @@ export type ExitLineRow = {
 export type ExitLineField = "article_id" | "packaging_id" | "entered_quantity" | "lot_id";
 
 export type ExitLineErrors = Partial<Record<ExitLineField, string>>;
+
+/** « exit » : sortie de stock. « transfer » : transfert entre entrepôts (les lots expirés ne se déplacent pas). */
+export type LineVariant = "exit" | "transfer";
+
+const COPY = {
+  exit: {
+    packaging: "Sorti en",
+    quantity: "Quantité sortie",
+    moved: "Stock sorti :",
+    expiredNote: "non prélevé(s) automatiquement",
+    lotLabel: "Lot à prélever",
+    lotHint:
+      "Pour un rappel de lot ou la destruction d'un lot donné. Sinon, le lot qui expire en premier est pris.",
+  },
+  transfer: {
+    packaging: "Transféré en",
+    quantity: "Quantité à transférer",
+    moved: "Stock transféré :",
+    expiredNote: "non transférable(s)",
+    lotLabel: "Lot à transférer",
+    lotHint: "Pour déplacer un lot précis. Sinon, le lot qui expire en premier est transféré.",
+  },
+} as const;
 
 const BASE_UNIT = "__base__";
 const AUTO_LOT = "__auto__";
@@ -83,6 +113,7 @@ type StockSectionProps = {
   article: Article;
   warehouseId: string;
   expiredOnly: boolean;
+  variant: LineVariant;
   requested: string | null;
   alreadyRequested: bigint;
   lotId: string | null;
@@ -94,6 +125,7 @@ function StockSection({
   article,
   warehouseId,
   expiredOnly,
+  variant,
   requested,
   alreadyRequested,
   lotId,
@@ -102,6 +134,7 @@ function StockSection({
 }: StockSectionProps) {
   const query = useArticleStock(article.id);
   const [lotOpen, setLotOpen] = useState(lotId !== null);
+  const copy = COPY[variant];
 
   if (!warehouseId) {
     return <p className="text-sm text-muted-foreground">Choisissez l&apos;entrepôt pour voir le stock disponible.</p>;
@@ -130,9 +163,11 @@ function StockSection({
   const requestedMicro = toMicro(requested);
   const exceeds = requestedMicro !== null && requestedMicro > capacity;
 
+  const choosable = expiredOnly ? lots.filter(isExpired) : variant === "transfer" ? eligible : lots;
+
   const lotOptions = [
     { value: AUTO_LOT, label: "Automatique : le lot qui expire en premier" },
-    ...(expiredOnly ? lots.filter(isExpired) : lots).map((lot) => ({
+    ...choosable.map((lot) => ({
       value: lot.id,
       label: `${lot.code} · ${formatQuantity(lot.quantity_remaining)} ${symbol}${
         lot.expiry_date ? ` · exp. ${formatDate(lot.expiry_date)}` : ""
@@ -159,7 +194,10 @@ function StockSection({
             </>
           )}
           {excluded > MICRO_ZERO ? (
-            <span> · {formatQuantity(fromMicro(excluded))} {symbol} expiré(s), non prélevé(s) automatiquement</span>
+            <span>
+              {" "}
+              · {formatQuantity(fromMicro(excluded))} {symbol} expiré(s), {copy.expiredNote}
+            </span>
           ) : null}
         </p>
 
@@ -188,12 +226,7 @@ function StockSection({
 
           {lotOpen ? (
             <div className="mt-4 max-w-xl">
-              <Field
-                label="Lot à prélever"
-                optional
-                error={lotError}
-                hint="Pour un rappel de lot ou la destruction d'un lot donné. Sinon, le lot qui expire en premier est pris."
-              >
+              <Field label={copy.lotLabel} optional error={lotError} hint={copy.lotHint}>
                 <Select
                   size="lg"
                   options={lotOptions}
@@ -219,6 +252,7 @@ type ExitLineEditorProps = {
   onChange: (patch: Partial<ExitLineRow>) => void;
   onRemove: () => void;
   removable: boolean;
+  variant?: LineVariant;
 };
 
 export function ExitLineEditor({
@@ -231,7 +265,11 @@ export function ExitLineEditor({
   onChange,
   onRemove,
   removable,
+  variant = "exit",
 }: ExitLineEditorProps) {
+  const { tenant } = useActiveMembership();
+  const copy = COPY[variant];
+
   const article = row.article;
   const packaging = article?.packagings.find((item) => item.id === row.packagingId) ?? null;
   const unitLabel = packaging?.name ?? article?.unit.symbol ?? "";
@@ -255,26 +293,31 @@ export function ExitLineEditor({
           <Field label={`Article ${index + 1}`} error={errors.article_id}>
             <RemoteCombobox<Article>
               size="lg"
-              queryKey={["exit-articles"]}
+              queryKey={["stock-articles", tenant.id, warehouseId, expiredOnly ? "expired" : "sellable"]}
               fetcher={(term, signal) =>
-                listArticles({ search: term, status: "active", categoryId: null, page: 1 }, signal).then(
-                  (result) => result.data,
-                )
+                warehouseId
+                  ? listAvailableArticles(warehouseId, expiredOnly ? "expired" : "sellable", term, signal)
+                  : Promise.resolve([])
               }
               value={article}
               getKey={(item) => item.id}
               renderItem={(item) => (
                 <span className="flex min-w-0 flex-col text-left">
                   <span className="truncate">{item.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {item.code} · {item.unit.symbol}
-                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{stockHint(item)}</span>
                 </span>
               )}
-              onChange={(item) => onChange({ article: item, packagingId: null, lotId: null })}
-              placeholder="Rechercher un article"
+              onChange={(item) =>
+                onChange({ article: toArticle(item as AvailableArticle), packagingId: null, lotId: null })
+              }
+              disabled={!warehouseId}
+              placeholder={warehouseId ? "Rechercher un article en stock" : "Choisissez d'abord l'entrepôt"}
               searchPlaceholder="Nom, code ou code-barres"
-              emptyMessage="Aucun article ne correspond."
+              emptyMessage={
+                expiredOnly
+                  ? "Aucun article avec un lot expiré dans cet entrepôt."
+                  : "Aucun article en stock dans cet entrepôt ne correspond."
+              }
             />
           </Field>
         </div>
@@ -297,7 +340,7 @@ export function ExitLineEditor({
         <div className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             {hasPackagings ? (
-              <Field label="Sorti en" error={errors.packaging_id}>
+              <Field label={copy.packaging} error={errors.packaging_id}>
                 <Select
                   size="lg"
                   options={unitOptions}
@@ -307,7 +350,7 @@ export function ExitLineEditor({
               </Field>
             ) : null}
 
-            <Field label="Quantité sortie" error={errors.entered_quantity}>
+            <Field label={copy.quantity} error={errors.entered_quantity}>
               <AffixInput
                 size="lg"
                 inputMode="decimal"
@@ -322,7 +365,7 @@ export function ExitLineEditor({
 
           {packaging && converted ? (
             <p className="text-sm text-muted-foreground">
-              Stock sorti :{" "}
+              {copy.moved}{" "}
               <span className="font-medium tabular-nums text-foreground">
                 {formatQuantity(converted)} {article.unit.symbol}
               </span>
@@ -334,6 +377,7 @@ export function ExitLineEditor({
               article={article}
               warehouseId={warehouseId}
               expiredOnly={expiredOnly}
+              variant={variant}
               requested={converted}
               alreadyRequested={alreadyRequested}
               lotId={row.lotId}

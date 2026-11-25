@@ -138,6 +138,49 @@ export function ExitForm({ exit, initialArticles, prefill = null }: ExitFormProp
     setRows((current) => current.map((row) => ({ ...row, lotId: null })));
   }
 
+    /** Les articles dépendent du stock de l'entrepôt (et du motif « Péremption ») : on les retire quand l'un change. */
+  function clearArticles(): boolean {
+    const hadArticles = rows.some((row) => row.article !== null);
+
+    setRows((current) =>
+      current.map((row) =>
+        row.article === null ? row : { ...row, article: null, packagingId: null, quantity: "", lotId: null },
+      ),
+    );
+    setLineErrors({});
+    setLinesError(undefined);
+
+    return hadArticles;
+  }
+
+  function changeWarehouse(value: string) {
+    if (value === effectiveWarehouseId) return;
+
+    setWarehouseId(value);
+
+    if (clearArticles()) {
+      toast.info("Les articles ont été retirés des lignes : le stock dépend de l'entrepôt choisi.");
+    }
+
+    clearHeaderError("warehouse_id");
+  }
+
+  function changeReason(value: string) {
+    const next = reasons.find((item) => item.value === value);
+
+    setReason(value);
+
+    if ((next?.expired_only ?? false) !== expiredOnly) {
+      if (clearArticles()) {
+        toast.info("Les articles ont été retirés des lignes : ce motif ne concerne pas les mêmes lots.");
+      }
+    } else {
+      clearLots();
+    }
+
+    clearHeaderError("reason");
+  }
+
   function patchRow(key: string, patch: Partial<ExitLineRow>) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
     setLineErrors({});
@@ -260,11 +303,7 @@ export function ExitForm({ exit, initialArticles, prefill = null }: ExitFormProp
                 size="lg"
                 options={reasons.map((item) => ({ value: item.value, label: item.label }))}
                 value={reason}
-                onValueChange={(value) => {
-                  setReason(value);
-                  clearLots();
-                  clearHeaderError("reason");
-                }}
+                                onValueChange={changeReason}
               />
             </Field>
 
@@ -286,11 +325,7 @@ export function ExitForm({ exit, initialArticles, prefill = null }: ExitFormProp
                 size="lg"
                 options={warehouseOptions}
                 value={effectiveWarehouseId}
-                onValueChange={(value) => {
-                  setWarehouseId(value);
-                  clearLots();
-                  clearHeaderError("warehouse_id");
-                }}
+                                onValueChange={changeWarehouse}
                 placeholder="Choisir un entrepôt"
               />
             </Field>

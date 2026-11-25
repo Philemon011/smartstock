@@ -48,6 +48,8 @@ export type CustomerFilters = {
   search: string;
   status: CustomerStatusFilter;
   page: number;
+  /** Seulement les clients qui ont un reste à payer. */
+  hasBalance?: boolean;
 };
 
 const BASE = "/api/v1/customers";
@@ -57,6 +59,7 @@ export function listCustomers(filters: CustomerFilters, signal?: AbortSignal): P
 
   if (filters.search) params.set("search", filters.search);
   if (filters.status !== "all") params.set("status", filters.status);
+  if (filters.hasBalance) params.set("has_balance", "1");
   if (filters.page > 1) params.set("page", String(filters.page));
 
   const query = params.toString();

@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
+import { Banknote, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +16,21 @@ export type CustomerHandlers = {
   onActivate: (customer: Customer) => void;
   onDeactivate: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
+  onCollect: (customer: Customer) => void;
 };
+
+/** Ce client a un reste à payer. */
+export function owes(customer: Customer): boolean {
+  return /[1-9]/.test(customer.balance_due ?? "0");
+}
+
+/**
+ * Encaisser demande le même droit que modifier un client (vendeur, administrateur, propriétaire)
+ * sur une entreprise qui accepte les écritures : le serveur en fait foi.
+ */
+export function canCollect(customer: Customer): boolean {
+  return customer.can.update && owes(customer);
+}
 
 type CustomerActionsProps = {
   customer: Customer;
@@ -27,14 +41,15 @@ type CustomerActionsProps = {
 export function CustomerActions({ customer, busy, handlers }: CustomerActionsProps) {
   const { can } = customer;
 
+  const collect = canCollect(customer);
   const canDeactivate = can.toggle && customer.is_active;
   const canActivate = can.toggle && !customer.is_active;
 
-  if (!can.update && !canDeactivate && !canActivate && !can.delete) {
+  if (!collect && !can.update && !canDeactivate && !canActivate && !can.delete) {
     return null;
   }
 
-  const hasMainActions = can.update || canDeactivate || canActivate;
+  const hasMainActions = collect || can.update || canDeactivate || canActivate;
 
   return (
     <DropdownMenu>
@@ -51,6 +66,12 @@ export function CustomerActions({ customer, busy, handlers }: CustomerActionsPro
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className={busy ? "pointer-events-none opacity-60" : undefined}>
+        {collect ? (
+          <DropdownMenuItem icon={Banknote} onSelect={() => handlers.onCollect(customer)}>
+            Encaisser un paiement
+          </DropdownMenuItem>
+        ) : null}
+
         {can.update ? (
           <DropdownMenuItem icon={Pencil} onSelect={() => handlers.onEdit(customer)}>
             Modifier

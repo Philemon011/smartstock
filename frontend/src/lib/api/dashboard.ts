@@ -20,6 +20,23 @@ export type Dashboard = {
     count_30d: number;
     total_30d: string;
   } | null;
+
+    /** Null pour les rôles qui ne vendent pas. */
+  sales: {
+    today: { count: number; total: string };
+    month: {
+      count: number;
+      total: string;
+      /** Null pour les rôles qui ne voient pas les coûts. */
+      margin: string | null;
+    };
+    receivables: {
+      total_due: string;
+      customers_count: number;
+      sales_count: number;
+      oldest_date: string | null;
+    };
+  } | null;
 };
 
 export async function getDashboard(signal?: AbortSignal): Promise<Dashboard> {

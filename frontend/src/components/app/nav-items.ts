@@ -1,5 +1,7 @@
 import {
+  ArrowLeftRight,
   Bell,
+  Building2,
   LayoutDashboard,
   Package,
   PackageMinus,
@@ -19,7 +21,7 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   /** Droit exigé, fourni par le serveur : l'entrée du menu n'apparaît que si la personne l'a. */
-    ability?: "manage_stock" | "sell";
+    ability?: "manage_stock" | "sell" | "transfer";
   /** Pastille de compteur affichée à droite. */
   badge?: "alerts";
     /** Actif uniquement sur cette page exacte, pas sur ses sous-pages. */
@@ -52,6 +54,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/stock-entries", label: "Entrées", icon: PackagePlus, ability: "manage_stock" },
       { href: "/stock-exits", label: "Sorties", icon: PackageMinus, ability: "manage_stock" },
+            { href: "/stock-transfers", label: "Transferts", icon: ArrowLeftRight, ability: "transfer" },
       { href: "/alerts", label: "Alertes", icon: Bell, badge: "alerts" },
       { href: "/warehouses", label: "Entrepôts", icon: Warehouse },
     ],
@@ -63,5 +66,9 @@ export const navGroups: NavGroup[] = [
       { href: "/sales", label: "Ventes", icon: Receipt, exclude: ["/sales/new"] },
       { href: "/customers", label: "Clients", icon: Users },
     ],
+  },
+    {
+    label: "Paramètres",
+    items: [{ href: "/settings/company", label: "Entreprise", icon: Building2 }],
   },
 ];

@@ -9,7 +9,9 @@ import { RemoteCombobox } from "@/components/ui/remote-combobox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select } from "@/components/ui/select";
 import { useArticleStock } from "@/hooks/use-stock-entries";
-import { listArticles, type Article } from "@/lib/api/articles";
+import { useActiveMembership } from "@/components/session/session-provider";
+import type { Article } from "@/lib/api/articles";
+import { listAvailableArticles, toArticle, type AvailableArticle } from "@/lib/api/available-articles";
 import { decimalToString } from "@/lib/decimal";
 import { formatMoney, formatQuantity } from "@/lib/format";
 import {
@@ -129,6 +131,7 @@ export function SaleLineEditor({
   onRemove,
   removable,
 }: SaleLineEditorProps) {
+    const { tenant } = useActiveMembership();
   const article = row.article;
   const packaging = article?.packagings.find((item) => item.id === row.packagingId) ?? null;
   const unitLabel = packaging?.name ?? article?.unit.symbol ?? "";
@@ -165,14 +168,14 @@ export function SaleLineEditor({
     <li className="rounded-lg border bg-background p-4">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <Field label={`Article ${index + 1}`} error={errors.article_id}>
+                    <Field label={`Article ${index + 1}`} error={errors.article_id}>
             <RemoteCombobox<Article>
               size="lg"
-              queryKey={["sale-articles"]}
+              queryKey={["stock-articles", tenant.id, warehouseId, "sellable"]}
               fetcher={(term, signal) =>
-                listArticles({ search: term, status: "active", categoryId: null, page: 1 }, signal).then(
-                  (result) => result.data,
-                )
+                warehouseId
+                  ? listAvailableArticles(warehouseId, "sellable", term, signal)
+                  : Promise.resolve([])
               }
               value={article}
               getKey={(item) => item.id}
@@ -181,21 +184,27 @@ export function SaleLineEditor({
                   <span className="truncate">{item.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {item.code} · {formatMoney(item.sale_price, currency)} / {item.unit.symbol}
+                    {"available" in item
+                      ? ` · ${formatQuantity((item as AvailableArticle).available)} en stock`
+                      : ""}
                   </span>
                 </span>
               )}
-              onChange={(item) =>
+              onChange={(item) => {
+                const chosen = toArticle(item as AvailableArticle);
+
                 onChange({
-                  article: item,
+                  article: chosen,
                   packagingId: null,
-                  unitPrice: priceString(item, null, decimals),
+                  unitPrice: priceString(chosen, null, decimals),
                   discountType: "none",
                   discountValue: "",
-                })
-              }
-              placeholder="Rechercher un article"
+                });
+              }}
+              disabled={!warehouseId}
+              placeholder={warehouseId ? "Rechercher un article en stock" : "Choisissez d'abord l'entrepôt"}
               searchPlaceholder="Nom, code ou code-barres"
-              emptyMessage="Aucun article ne correspond."
+              emptyMessage="Aucun article en stock dans cet entrepôt ne correspond."
             />
           </Field>
         </div>

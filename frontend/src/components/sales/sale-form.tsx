@@ -153,6 +153,24 @@ export function SaleForm({ warehouseId, onWarehouseChange, onCompleted }: SaleFo
 
   // ------------------------------------------------------------------ Actions
 
+    /** Le stock dépend de l'entrepôt : changer d'entrepôt retire les articles déjà choisis. */
+  function changeWarehouse(value: string) {
+    if (value === effectiveWarehouseId) return;
+
+    onWarehouseChange(value);
+
+    if (rows.some((row) => row.article !== null)) {
+      setRows((current) =>
+        current.map((row) => (row.article === null ? row : { ...emptySaleRow(), key: row.key })),
+      );
+      setLineErrors({});
+      setLinesError(undefined);
+      toast.info("Les articles ont été retirés des lignes : le stock dépend de l'entrepôt choisi.");
+    }
+
+    clearHeaderError("warehouse_id");
+  }
+
   function patchRow(key: string, patch: Partial<SaleLineRow>) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
     setLineErrors({});
@@ -313,10 +331,7 @@ export function SaleForm({ warehouseId, onWarehouseChange, onCompleted }: SaleFo
                   size="lg"
                   options={warehouseOptions}
                   value={effectiveWarehouseId}
-                  onValueChange={(value) => {
-                    onWarehouseChange(value);
-                    clearHeaderError("warehouse_id");
-                  }}
+                                    onValueChange={changeWarehouse}
                   placeholder="Choisir un entrepôt"
                 />
               </Field>

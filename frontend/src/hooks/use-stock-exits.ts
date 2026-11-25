@@ -48,6 +48,7 @@ export function useStockExitMutations() {
       queryClient.invalidateQueries({ queryKey: ["warehouses", tenant.id] }),
       queryClient.invalidateQueries({ queryKey: ["alerts", tenant.id] }),
       queryClient.invalidateQueries({ queryKey: ["dashboard", tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ["stock-articles", tenant.id] }),
     ]);
   };
 

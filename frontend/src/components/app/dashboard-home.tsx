@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Banknote,
   Bell,
   ChevronRight,
   CircleCheck,
@@ -8,6 +9,9 @@ import {
   Package,
   PackageMinus,
   PackagePlus,
+  Receipt,
+  ShoppingCart,
+  TrendingUp,
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +36,8 @@ type Kpi = {
   hint?: string;
   icon: LucideIcon;
   tone?: "danger" | "warning" | "success";
+  /** Rend toute la cellule cliquable. */
+  href?: string;
 };
 
 const GRID_COLUMNS: Record<number, string> = {
@@ -60,6 +66,44 @@ function TrialNotice({ tenant }: { tenant: TenantSummary }) {
   return null;
 }
 
+function KpiCell({ item, dense, className }: { item: Kpi; dense: boolean; className?: string }) {
+  const body = (
+    <>
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground">
+          <item.icon className="size-[18px]" strokeWidth={1.5} aria-hidden />
+        </span>
+        <p className="text-sm text-muted-foreground">{item.label}</p>
+      </div>
+
+      <p
+        className={cn(
+          "mt-4 break-words font-semibold tabular-nums tracking-display",
+          dense ? "text-2xl" : "text-2xl sm:text-3xl",
+          item.tone ? VALUE_TONES[item.tone] : "text-foreground",
+        )}
+      >
+        {item.value}
+      </p>
+
+      {item.hint ? <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p> : null}
+    </>
+  );
+
+  const base = cn("bg-card p-5 sm:p-6", className);
+
+  return item.href ? (
+    <Link
+      href={item.href}
+      className={cn(base, "block outline-none transition-colors duration-200 ease-smooth hover:bg-accent/40 focus-visible:bg-accent/40")}
+    >
+      {body}
+    </Link>
+  ) : (
+    <div className={base}>{body}</div>
+  );
+}
+
 function KpiStrip({ items }: { items: Kpi[] }) {
   const dense = items.length > 4;
 
@@ -71,32 +115,12 @@ function KpiStrip({ items }: { items: Kpi[] }) {
       )}
     >
       {items.map((item, index) => (
-        <div
+        <KpiCell
           key={item.label}
-          className={cn(
-            "bg-card p-5 sm:p-6",
-            dense && index === items.length - 1 && "col-span-2 xl:col-span-1",
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground">
-              <item.icon className="size-[18px]" strokeWidth={1.5} aria-hidden />
-            </span>
-            <p className="text-sm text-muted-foreground">{item.label}</p>
-          </div>
-
-          <p
-            className={cn(
-              "mt-4 break-words font-semibold tabular-nums tracking-display",
-              dense ? "text-2xl" : "text-2xl sm:text-3xl",
-              item.tone ? VALUE_TONES[item.tone] : "text-foreground",
-            )}
-          >
-            {item.value}
-          </p>
-
-          {item.hint ? <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p> : null}
-        </div>
+          item={item}
+          dense={dense}
+          className={dense && index === items.length - 1 ? "col-span-2 xl:col-span-1" : undefined}
+        />
       ))}
     </div>
   );
@@ -142,7 +166,12 @@ function AlertsCard({ alerts }: { alerts: Dashboard["alerts"] }) {
                   <meta.icon className="size-[18px]" strokeWidth={1.5} aria-hidden />
                 </span>
 
-                <span className={cn("flex-1 text-sm", count > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
+                <span
+                  className={cn(
+                    "flex-1 text-sm",
+                    count > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                  )}
+                >
                   {meta.label}
                 </span>
 
@@ -229,7 +258,7 @@ function buildKpis(data: Dashboard, currency: string): Kpi[] {
     {
       label: "Articles actifs",
       value: String(data.articles_active),
-      hint: data.articles_active > 1 ? "dans votre catalogue" : "dans votre catalogue",
+      hint: "dans votre catalogue",
       icon: Package,
     },
   ];
@@ -258,7 +287,7 @@ function buildKpis(data: Dashboard, currency: string): Kpi[] {
     });
   }
 
-    if (data.exits) {
+  if (data.exits) {
     items.push({
       label: "Sorties (30 jours)",
       value: formatMoney(data.exits.total_30d, currency),
@@ -278,6 +307,65 @@ function buildKpis(data: Dashboard, currency: string): Kpi[] {
   });
 
   return items;
+}
+
+function buildSalesKpis(sales: NonNullable<Dashboard["sales"]>, currency: string): Kpi[] {
+  const items: Kpi[] = [
+    {
+      label: "Ventes aujourd'hui",
+      value: formatMoney(sales.today.total, currency),
+      hint: pluralize(sales.today.count, "vente", "ventes"),
+      icon: ShoppingCart,
+      href: "/sales",
+    },
+    {
+      label: "Ventes du mois",
+      value: formatMoney(sales.month.total, currency),
+      hint: pluralize(sales.month.count, "vente", "ventes"),
+      icon: Receipt,
+      href: "/sales",
+    },
+  ];
+
+  if (sales.month.margin !== null) {
+    items.push({
+      label: "Marge du mois",
+      value: formatMoney(sales.month.margin, currency),
+      hint: "Ventes moins coût d'achat",
+      icon: TrendingUp,
+    });
+  }
+
+  const owed = sales.receivables;
+  const hasDue = /[1-9]/.test(owed.total_due);
+
+  items.push({
+    label: "À encaisser",
+    value: formatMoney(owed.total_due, currency),
+    hint: hasDue
+      ? `${pluralize(owed.customers_count, "client", "clients")}${owed.oldest_date ? ` · depuis le ${formatDate(owed.oldest_date)}` : ""}`
+      : "Aucune créance",
+    icon: Banknote,
+    tone: hasDue ? "warning" : "success",
+    href: "/customers?due=1",
+  });
+
+  return items;
+}
+
+function SalesSection({ sales, currency }: { sales: NonNullable<Dashboard["sales"]>; currency: string }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg">Ventes</h2>
+        <Link href="/sales" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+          Tout voir
+        </Link>
+      </div>
+
+      <KpiStrip items={buildSalesKpis(sales, currency)} />
+    </section>
+  );
 }
 
 export function DashboardHome() {
@@ -303,6 +391,7 @@ export function DashboardHome() {
       {query.isPending ? (
         <div className="space-y-6">
           <Skeleton className="h-36 w-full rounded-xl" />
+          <Skeleton className="h-36 w-full rounded-xl" />
           <div className="grid gap-6 lg:grid-cols-5">
             <Skeleton className="h-72 rounded-xl lg:col-span-2" />
             <Skeleton className="h-72 rounded-xl lg:col-span-3" />
@@ -320,7 +409,9 @@ export function DashboardHome() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {query.data.sales ? <SalesSection sales={query.data.sales} currency={tenant.currency} /> : null}
+
           <KpiStrip items={buildKpis(query.data, tenant.currency)} />
 
           <div className={cn("grid gap-6", query.data.entries && "lg:grid-cols-5")}>

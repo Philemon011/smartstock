@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Receipt as ReceiptIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -10,9 +10,17 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCompanyProfile } from "@/hooks/use-company-profile";
 import { useSale } from "@/hooks/use-sales";
 import { ApiError } from "@/lib/api/client";
 import type { Sale } from "@/lib/api/sales";
+import {
+  identifierLines,
+  legalMentionLines,
+  letterheadLines,
+  receiptFooter,
+  type LetterheadSource,
+} from "@/lib/company-lines";
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from "@/lib/format";
 
 type Format = "a4" | "ticket";
@@ -31,9 +39,7 @@ function readFormat(): Format {
   if (typeof window === "undefined") return "a4";
 
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-
-    return saved === "ticket" ? "ticket" : "a4";
+    return window.localStorage.getItem(STORAGE_KEY) === "ticket" ? "ticket" : "a4";
   } catch {
     return "a4";
   }
@@ -60,9 +66,68 @@ function printCss(format: Format): string {
 
 const isPositive = (value: string): boolean => /[1-9]/.test(value);
 
-type DocumentProps = {
+// ------------------------------------------------------------------- Logo
+
+type LogoStatus = "none" | "loading" | "ready" | "failed";
+
+/**
+ * Charge le logo avant d'autoriser l'impression : un logo qui n'est pas encore arrivé
+ * manquerait sur le papier. S'il est introuvable, le reçu s'imprime sans lui.
+ */
+function useLogoStatus(url: string | null): LogoStatus {
+  const [state, setState] = useState<{ url: string; status: "ready" | "failed" } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+
+    let active = true;
+    const image = new Image();
+
+    image.onload = () => {
+      if (active) setState({ url, status: "ready" });
+    };
+    image.onerror = () => {
+      if (active) setState({ url, status: "failed" });
+    };
+    image.src = url;
+
+    return () => {
+      active = false;
+    };
+  }, [url]);
+
+  if (!url) return "none";
+
+  return state?.url === url ? state.status : "loading";
+}
+
+/** Le fichier PDF prend le nom du reçu au lieu du titre de la page. */
+function usePrintTitle(title: string) {
+  useEffect(() => {
+    let previous = document.title;
+
+    const before = () => {
+      previous = document.title;
+      document.title = title;
+    };
+    const after = () => {
+      document.title = previous;
+    };
+
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, [title]);
+}
+
+type PaperProps = {
   sale: Sale;
-  company: string;
+  source: LetterheadSource;
+  logoUrl: string | null;
   currency: string;
   minHeight?: string;
 };
@@ -109,13 +174,18 @@ function TotalLine({ label, value, tone }: { label: string; value: string; tone?
   );
 }
 
-function A4Document({ sale, company, currency, minHeight }: DocumentProps) {
+function A4Paper({ sale, source, logoUrl, currency, minHeight }: PaperProps) {
   const lines = sale.lines ?? [];
   const payments = (sale.payments ?? []).filter((payment) => payment.status === "valid");
   const cancelled = sale.status === "cancelled";
   const hasDiscount = isPositive(sale.discount_total);
   const hasBalance = !cancelled && isPositive(sale.balance_due);
   const money = (value: string) => formatMoney(value, currency);
+
+  const contact = letterheadLines(source);
+  const identifiers = identifierLines(source);
+  const mentions = legalMentionLines(source);
+  const hasLegal = identifiers.length > 0 || mentions.length > 0;
 
   return (
     <div
@@ -144,13 +214,32 @@ function A4Document({ sale, company, currency, minHeight }: DocumentProps) {
           <tr>
             <td className="px-[16mm] align-top">
               <header className="flex items-start justify-between gap-8 border-b-2 border-[#0f172a] pb-6">
-                <div>
-                  <p className="font-display text-[22pt] font-semibold leading-none tracking-heading">{company}</p>
-                  <p className="mt-2 text-[9pt] text-[#64748b]">Reçu de vente</p>
+                <div className="flex min-w-0 items-start gap-4">
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      className="max-h-[18mm] max-w-[42mm] shrink-0 object-contain"
+                    />
+                  ) : null}
+
+                  <div className="min-w-0">
+                    <p className="break-words font-display text-[20pt] font-semibold leading-none tracking-heading">
+                      {source.name}
+                    </p>
+                    {contact.map((line) => (
+                      <p key={line} className="mt-1.5 break-words text-[8.5pt] leading-snug text-[#64748b]">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-[7.5pt] font-medium uppercase tracking-[0.12em] text-[#64748b]">Reçu n°</p>
+                <div className="shrink-0 text-right">
+                  <p className="text-[7.5pt] font-medium uppercase tracking-[0.12em] text-[#64748b]">
+                    Reçu de vente n°
+                  </p>
                   <p className="mt-1 text-[16pt] font-semibold tabular-nums">{sale.number}</p>
                   <StatusPill sale={sale} />
                 </div>
@@ -278,9 +367,19 @@ function A4Document({ sale, company, currency, minHeight }: DocumentProps) {
                 </p>
               ) : null}
 
-              <footer className="mt-10 flex items-end justify-between gap-6 border-t border-[#e2e8f0] pt-4 text-[8.5pt] text-[#64748b]">
-                <p>Merci de votre confiance.</p>
-                <p className="text-right">
+              <footer className="mt-10 break-inside-avoid border-t border-[#e2e8f0] pt-4 text-center">
+                <p className="text-[9.5pt] font-medium">{receiptFooter(source)}</p>
+
+                {hasLegal ? (
+                  <div className="mt-2 space-y-0.5 text-[8pt] leading-snug text-[#64748b]">
+                    {identifiers.length > 0 ? <p>{identifiers.join("  ·  ")}</p> : null}
+                    {mentions.map((line, index) => (
+                      <p key={`${index}-${line}`}>{line}</p>
+                    ))}
+                  </div>
+                ) : null}
+
+                <p className="mt-3 text-[7.5pt] text-[#94a3b8]">
                   {sale.number} · imprimé le {formatDateTime(new Date().toISOString())}
                 </p>
               </footer>
@@ -302,8 +401,8 @@ function A4Document({ sale, company, currency, minHeight }: DocumentProps) {
 
 // -------------------------------------------------------------- Ticket 80 mm
 
-function Rule({ strong }: { strong?: boolean }) {
-  return <div className={strong ? "border-t-2 border-black" : "border-t border-black"} />;
+function Rule() {
+  return <div className="border-t border-black" />;
 }
 
 function TicketRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
@@ -315,7 +414,7 @@ function TicketRow({ label, value, bold }: { label: string; value: string; bold?
   );
 }
 
-function TicketDocument({ sale, company, currency }: DocumentProps) {
+function TicketPaper({ sale, source, logoUrl, currency }: PaperProps) {
   const lines = sale.lines ?? [];
   const payments = (sale.payments ?? []).filter((payment) => payment.status === "valid");
   const cancelled = sale.status === "cancelled";
@@ -324,12 +423,33 @@ function TicketDocument({ sale, company, currency }: DocumentProps) {
   const cash = payments.find((payment) => payment.tendered !== null && isPositive(payment.change_given));
   const money = (value: string) => formatMoney(value, currency);
 
+  const contact = letterheadLines(source);
+  const identifiers = identifierLines(source);
+  const mentions = legalMentionLines(source);
+
   return (
     <div style={{ width: "80mm" }} className="bg-white px-[4mm] py-[5mm] text-[9pt] leading-snug text-black">
       <header className="space-y-1 text-center">
-        <p className="font-display text-[13pt] font-semibold leading-tight tracking-heading">{company}</p>
-        <p className="text-[7.5pt] font-medium uppercase tracking-[0.18em]">Ticket de vente</p>
-        <p className="pt-1 text-[11pt] font-semibold tabular-nums">{sale.number}</p>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="mx-auto mb-1.5 max-h-[14mm] max-w-[48mm] object-contain grayscale"
+          />
+        ) : null}
+
+        <p className="break-words font-display text-[13pt] font-semibold leading-tight tracking-heading">
+          {source.name}
+        </p>
+        {contact.map((line) => (
+          <p key={line} className="break-words text-[7.5pt] leading-snug">
+            {line}
+          </p>
+        ))}
+
+        <p className="pt-2 text-[7.5pt] font-medium uppercase tracking-[0.18em]">Ticket de vente</p>
+        <p className="text-[11pt] font-semibold tabular-nums">{sale.number}</p>
         <p className="text-[8pt]">{sale.created_at ? formatDateTime(sale.created_at) : formatDate(sale.sale_date)}</p>
       </header>
 
@@ -361,8 +481,7 @@ function TicketDocument({ sale, company, currency }: DocumentProps) {
             {line.discount ? (
               <div className="flex justify-between gap-3 text-[8pt]">
                 <span>
-                  Remise{" "}
-                  {line.discount.type === "percent" ? `${formatQuantity(line.discount.value)} %` : ""}
+                  Remise {line.discount.type === "percent" ? `${formatQuantity(line.discount.value)} %` : ""}
                 </span>
                 <span className="tabular-nums">− {money(line.discount.amount)}</span>
               </div>
@@ -420,7 +539,20 @@ function TicketDocument({ sale, company, currency }: DocumentProps) {
         <Rule />
       </div>
 
-      <p className="text-center text-[8pt]">Merci de votre confiance.</p>
+      <footer className="space-y-1 text-center">
+        <p className="text-[8.5pt] font-medium">{receiptFooter(source)}</p>
+
+        {identifiers.length > 0 || mentions.length > 0 ? (
+          <div className="space-y-0.5 pt-1 text-[7pt] leading-snug">
+            {identifiers.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            {mentions.map((line, index) => (
+              <p key={`${index}-${line}`}>{line}</p>
+            ))}
+          </div>
+        ) : null}
+      </footer>
     </div>
   );
 }
@@ -461,9 +593,21 @@ function PrintPortal({ children }: { children: ReactNode }) {
   return createPortal(<div id="print-root">{children}</div>, document.body);
 }
 
-function Receipt({ sale, company, currency }: { sale: Sale; company: string; currency: string }) {
+type ReceiptViewProps = {
+  sale: Sale;
+  source: LetterheadSource;
+  logoUrl: string | null;
+  currency: string;
+};
+
+function ReceiptView({ sale, source, logoUrl, currency }: ReceiptViewProps) {
   const [format, setFormat] = useState<Format>(readFormat);
   const { containerRef, paperRef, scale, height } = useFitScale(PAPER_WIDTH[format]);
+
+  const logoStatus = useLogoStatus(logoUrl);
+  const readyLogo = logoStatus === "ready" ? logoUrl : null;
+
+  usePrintTitle(`Reçu ${sale.number}`);
 
   function changeFormat(next: Format) {
     setFormat(next);
@@ -475,7 +619,7 @@ function Receipt({ sale, company, currency }: { sale: Sale; company: string; cur
     }
   }
 
-  const Document = format === "a4" ? A4Document : TicketDocument;
+  const Paper = format === "a4" ? A4Paper : TicketPaper;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -499,7 +643,7 @@ function Receipt({ sale, company, currency }: { sale: Sale; company: string; cur
 
         <div className="flex flex-wrap items-center gap-3">
           <SegmentedControl label="Format du document" options={FORMATS} value={format} onChange={changeFormat} />
-          <Button onClick={() => window.print()}>
+          <Button loading={logoStatus === "loading"} onClick={() => window.print()}>
             <Printer strokeWidth={1.5} aria-hidden />
             Imprimer
           </Button>
@@ -514,9 +658,10 @@ function Receipt({ sale, company, currency }: { sale: Sale; company: string; cur
               className="bg-white shadow-popover"
               style={{ width: PAPER_WIDTH[format], transform: `scale(${scale})`, transformOrigin: "top left" }}
             >
-              <Document
+              <Paper
                 sale={sale}
-                company={company}
+                source={source}
+                logoUrl={readyLogo}
                 currency={currency}
                 minHeight={format === "a4" ? "297mm" : undefined}
               />
@@ -526,7 +671,7 @@ function Receipt({ sale, company, currency }: { sale: Sale; company: string; cur
       </div>
 
       <PrintPortal>
-        <Document sale={sale} company={company} currency={currency} />
+        <Paper sale={sale} source={source} logoUrl={readyLogo} currency={currency} />
       </PrintPortal>
     </div>
   );
@@ -535,8 +680,9 @@ function Receipt({ sale, company, currency }: { sale: Sale; company: string; cur
 export function SaleReceipt({ id }: { id: string }) {
   const { tenant } = useActiveMembership();
   const query = useSale(id);
+  const profile = useCompanyProfile();
 
-  if (query.isPending) {
+  if (query.isPending || profile.isPending) {
     return <Skeleton className="mx-auto h-[32rem] w-full max-w-3xl rounded-xl" />;
   }
 
@@ -545,7 +691,7 @@ export function SaleReceipt({ id }: { id: string }) {
 
     return notFound ? (
       <EmptyState
-        icon={Printer}
+        icon={ReceiptIcon}
         title="Vente introuvable"
         description="Cette vente n'existe pas."
         action={
@@ -561,5 +707,26 @@ export function SaleReceipt({ id }: { id: string }) {
     );
   }
 
-  return <Receipt sale={query.data} company={tenant.name} currency={tenant.currency} />;
+  // Si le profil ne se charge pas, le reçu reste imprimable avec le nom de l'entreprise.
+  const source: LetterheadSource = profile.data ?? {
+    name: tenant.name,
+    phone: null,
+    email: null,
+    address: null,
+    city: null,
+    website: null,
+    tax_id: null,
+    registration_number: null,
+    legal_mentions: null,
+    receipt_footer: null,
+  };
+
+  return (
+    <ReceiptView
+      sale={query.data}
+      source={source}
+      logoUrl={profile.data?.logo_url ?? null}
+      currency={tenant.currency}
+    />
+  );
 }
